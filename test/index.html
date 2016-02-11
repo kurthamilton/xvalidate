@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+</head>
+<body>
+	<form data-xval-form>
+		<div class="form-group">
+			Field 1
+			<input type="text" name="field1"
+				data-xval="field1" 
+				data-xval-url="http://jsonplaceholder.typicode.com/users/"
+				data-xval-data="{ ""val"": {0} }"
+				data-xval-plugin="test"
+				/>
+			<span data-xval-message-for="field1"></span>
+		</div>
+		<div class="form-group">
+			Field 2
+			<input type="text" name="field2"
+				data-xval="field2" 
+				data-xval-url="http://jsonplaceholder.typicode.com/users/"
+				data-xval-data="{0}"
+				data-xval-plugin="test"
+				/>
+			<span data-xval-message-for="field2"></span>
+		</div>
+		<div class="form-group">
+			<button type="submit">Submit</button>
+		</div>
+	</form>
+	<script src="js/lib/jquery-2.2.0.min.js"></script>
+	<script src="../src/xvalidate.js"></script>
+</body>
+</html>

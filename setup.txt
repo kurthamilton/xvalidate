@@ -1,0 +1,8 @@
+1. Install Node.js
+2. Run Node.js command prompt
+3. cd to this folder
+4. npm init
+5. npm install gulp -g
+6. npm install --save-dev gulp-babel
+7. npm install babel-preset-es2015 --save-dev
+8. npm install gulp-plumber --save-dev
