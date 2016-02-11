@@ -1,18 +1,20 @@
-var gulp = require('gulp'),
-    babel = require('gulp-babel'),
-    plumber = require('gulp-plumber'),
-    watchPath = 'src/*.js',
-    compilePath = 'compiled';
-	
+const gulp = require('gulp');
+const babel = require('gulp-babel');
+const plumber = require('gulp-plumber');
+const sourcePath = 'src/*.js';
+const targetPath = 'compiled';
+
 gulp.task('babel', function () {
-    gulp.src([watchPath])
+    gulp.src([sourcePath])
         .pipe(plumber())
-        .pipe(babel())
-        .pipe(gulp.dest(compilePath));
+        .pipe(babel({
+			presets: ['es2015']
+		}))
+        .pipe(gulp.dest(targetPath));
 });
 
 gulp.task('watch', function() {
-    gulp.watch([watchPath], ['babel']);
+    gulp.watch([sourcePath], ['babel']);
 });
 
 gulp.task('default', ['babel', 'watch']);

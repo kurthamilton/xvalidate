@@ -1,204 +1,272 @@
 'use strict';
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 var XValidate = window.XValidate || {};
 
 XValidate.Constants = function () {
-    return {
-        attr: { // The data-* attributes to set in the markup.
-            data: 'xval-data', // The data to pass to the request. Optional. Key names must be quoted for JSON.parse. Fallback to an object like: { elementname: elementvalue }.
-            element: 'xval', // An element within a form (see below) to be validated. Required.
-            form: 'xval-form', // A form to be validated. Required. Will be validated on submit if a form, else by a button click if anything else.
-            url: 'xval-url', // The url for the request. Required.
-            message: 'xval-message-for' // The message displaying the validation message. Optional. Set to the name or id of the element.
-        },
-        classes: { // CSS classes added by the validator. Can be used for styling. Can be overwritten.
-            messageValid: 'field-validation-valid',
-            messageInvalid: 'field-validation-invalid field-validation-error',
-            validating: 'x-validating'
-        },
-        dataAttr: { // The data-* attributes used to store status
-            invalidCount: '_xval-invalidCount',
-            validating: '_xval-validating',
-            valid: '_xval-valid'
-        },
-        events: { // The events triggered during validation.
-            validating: 'xval.validating', // Triggered on the form when validation starts.
-            validated: 'xval.validated' // Triggered on the form when validation ends.
-        }
-    };
-};
+    function Constants() {
+        _classCallCheck(this, Constants);
+    }
 
-XValidate.Form = class Form {
-    constructor($form) {
+    _createClass(Constants, null, [{
+        key: 'attr',
+        get: function get() {
+            // The data-* attributes to set in the markup.
+            return {
+                data: 'xval-data', // The data to pass to the request. Optional. Key names must be quoted for JSON.parse. Fallback to an object like: { elementname: elementvalue }.
+                element: 'xval', // An element within a form (see below) to be validated. Required.
+                form: 'xval-form', // A form to be validated. Required. Will be validated on submit if a form, else by a button click if anything else.
+                url: 'xval-url', // The url for the request. Required.
+                message: 'xval-message-for' // The message displaying the validation message. Optional. Set to the name or id of the element.
+            };
+        }
+    }, {
+        key: 'classes',
+        get: function get() {
+            // CSS classes added by the validator. Can be used for styling. Can be overwritten.
+            return {
+                messageValid: 'field-validation-valid',
+                messageInvalid: 'field-validation-invalid field-validation-error',
+                validating: 'x-validating'
+            };
+        }
+    }, {
+        key: 'dataAttr',
+        get: function get() {
+            // The data-* attributes used to store status
+            return {
+                invalidCount: '_xval-invalidCount',
+                validating: '_xval-validating',
+                valid: '_xval-valid'
+            };
+        }
+    }, {
+        key: 'events',
+        get: function get() {
+            // The events triggered during validation.
+            return {
+                validating: 'xval.validating', // Triggered on the form when validation starts.
+                validated: 'xval.validated' // Triggered on the form when validation ends.
+            };
+        }
+    }]);
+
+    return Constants;
+}();
+
+XValidate.Utils = function () {
+    function Utils() {
+        _classCallCheck(this, Utils);
+    }
+
+    _createClass(Utils, null, [{
+        key: 'data',
+
+        // todo replace calls to $.data with Utils.data
+        value: function data($element, attr, value) {
+            if (value === undefined) {
+                return $element.data(attr);
+            }
+            $element.data(attr, value);
+        }
+    }]);
+
+    return Utils;
+}();
+
+XValidate.Form = function () {
+    function Form($form) {
+        _classCallCheck(this, Form);
+
         this.$form = $form;
     }
 
-    static get attr() {
-        return {
-            message: 'xval-message-for'
-        };
-    }
-    static get classes() {
-        return {
-            messageValid: 'field-validation-valid',
-            messageInvalid: 'field-validation-invalid field-validation-error'
-        };
-    }
-    static get dataAttr() {
-        return {
-            invalidCount: '_xval-invalidCount',
-            validating: '_xval-validating'
-        };
-    }
-
-    errorLabelFor(target) {
-        return $('[data-' + this.attr.message + '="' + target.element()[0].name + '"]', this.$form);
-    }
-
-    hideErrors(target) {
-        this.errorLabelFor(target).html('').removeClass(this.classes.messageInvalid).addClass(this.classes.messageValid);
-    }
-
-    invalidCount(value) {
-        return this.$form.data(this.dataAttr.invalidCount, value);
-    }
-
-    onValidateRequired(callback) {
-        if (this.$form.is('form')) {
-            this.$form.on('submit', callback);
+    _createClass(Form, [{
+        key: 'errorLabelFor',
+        value: function errorLabelFor(target) {
+            return $('[data-' + XValidate.Constants.attr.message + '="' + target.$element[0].name + '"]', this.$form);
         }
-        $('button', this.$form).on('click', callback);
-    }
+    }, {
+        key: 'hideErrors',
+        value: function hideErrors(target) {
+            this.errorLabelFor(target).html('').removeClass(XValidate.Constants.classes.messageInvalid).addClass(XValidate.Constants.classes.messageValid);
+        }
+    }, {
+        key: 'invalidCount',
+        value: function invalidCount(value) {
+            return XValidate.Utils.data(this.$form, XValidate.Constants.dataAttr.invalidCount, value);
+        }
+    }, {
+        key: 'onValidateRequired',
+        value: function onValidateRequired(callback) {
+            var _this = this;
 
-    showError(target) {
-        this.errorLabelFor(target).html(this.errorLabelFor(target).html() + 'error message ').removeClass(this.classes.messageValid).addClass(this.classes.messageInvalid);
-    }
+            var run = function run(e) {
+                return callback.apply(_this, e);
+            };
 
-    targets() {
-        var elements = $('[data-' + this.attr.element + ']', this.$form);
-        return $.map(elements, function (element) {
-            return new XValidate.Target(self, $(element));
-        });
-    }
+            if (this.$form.is('form')) {
+                this.$form.on('submit', run);
+                return;
+            }
+            $('button', this.$form).on('click', run);
+            return;
+        }
+    }, {
+        key: 'showError',
+        value: function showError(target) {
+            this.errorLabelFor(target).html(this.errorLabelFor(target).html() + 'error message ').removeClass(XValidate.Constants.classes.messageValid).addClass(XValidate.Constants.classes.messageInvalid);
+        }
+    }, {
+        key: 'targets',
+        value: function targets() {
+            var _this2 = this;
 
-    trigger(name) {
-        this.$form.trigger(name);
-    }
+            var elements = $('[data-' + XValidate.Constants.attr.element + ']', this.$form);
+            return $.map(elements, function (element) {
+                return new XValidate.Target(_this2, $(element));
+            });
+        }
+    }, {
+        key: 'trigger',
+        value: function trigger(name) {
+            this.$form.trigger(name);
+        }
+    }, {
+        key: 'validating',
+        value: function validating(value) {
+            return this.$form.data(XValidate.Constants.dataAttr.validating, value);
+        }
+    }]);
 
-    validating(value) {
-        return this.$form.data(this.dataAttr.validating, value);
-    }
-};
+    return Form;
+}();
 
-XValidate.Target = class Target {
-    constructor(form, $element) {
+XValidate.Target = function () {
+    function Target(form, $element) {
+        _classCallCheck(this, Target);
+
         this.form = form;
         this.$element = $element;
     }
 
-    get attr() {
-        return {
-            data: 'xval-data',
-            url: 'xval-url'
-        };
-    }
-
-    get dataAttr() {
-        return {
-            valid: '_xval-valid'
-        };
-    }
-
-    data() {
-        return JSON.parse(this.dataTemplate().replace('{0}', this.$element.val()));
-    }
-
-    dataTemplate() {
-        if (this.$element[0].hasAttribute('data-' + this.attr.data)) {
-            return JSON.stringify(this.$element.data(this.attr.data));
+    _createClass(Target, [{
+        key: 'data',
+        value: function data() {
+            return JSON.parse(this.dataTemplate().replace('{0}', this.$element.val()));
         }
-        return '{ "' + this.$element[0].name || this.$element[0].id + '":"{0}"}';
-    }
-
-    url() {
-        return this.$element.data(this.attr.url);
-    }
-
-    valid(value) {
-        if (value === false) {
-            this.form.invalidCount(this.form.invalidCount() + 1);
-            this.form.showError(self);
+    }, {
+        key: 'dataTemplate',
+        value: function dataTemplate() {
+            if (this.$element[0].hasAttribute('data-' + XValidate.Constants.attr.data)) {
+                return JSON.stringify(this.$element.data(XValidate.Constants.attr.data));
+            }
+            return '{ "' + this.$element[0].name || this.$element[0].id + '":"{0}"}';
         }
-        return this.$element.data(this.dataAttr.valid, value);
-    }
-};
+    }, {
+        key: 'url',
+        value: function url() {
+            return this.$element.data(XValidate.Constants.attr.url);
+        }
+    }, {
+        key: 'valid',
+        value: function valid(value) {
+            if (value === false) {
+                this.form.invalidCount(this.form.invalidCount() + 1);
+                this.form.showError(this);
+            }
+            return this.$element.data(XValidate.Constants.dataAttr.valid, value);
+        }
+    }]);
 
-XValidate.Validator = class Validator {
-    constructor(form) {
+    return Target;
+}();
+
+XValidate.Validator = function () {
+    function Validator(form) {
+        _classCallCheck(this, Validator);
+
         this.form = form;
     }
 
-    static get events() {
-        return {
-            validating: 'xval.validating',
-            validated: 'xval.validated'
-        };
-    }
-
-    start() {
-        this.form.trigger(this.events.validating);
-        this.form.validating(true);
-        this.form.invalidCount(0);
-    }
-
-    stop() {
-        this.form.validating(false);
-        this.form.trigger(this.events.validated);
-    }
-
-    validate() {
-        if (this.form.validating() === true) {
-            return;
+    _createClass(Validator, [{
+        key: 'start',
+        value: function start() {
+            this.form.trigger(XValidate.Constants.events.validating);
+            this.form.validating(true);
+            this.form.invalidCount(0);
         }
-
-        this.start();
-
-        let targets = this.form.targets();
-        var requests = this.createRequests(targets);
-        var promise = $.when.apply($, requests);
-        promise.done(function () {
-            var results = arguments;
-            var resultCount = targets.length === 1 ? 1 : results.length;
-            for (var i = 0; i < resultCount; i++) {
-                var target = targets[i];
-                // todo: handle multiple vals per target
-                this.form.hideErrors(target);
-                var result = targets.length === 1 ? results[0] : results[i][0];
-                // todo: configure result eval. ***Plugin***
-                var isValid = result === true;
-                target.valid(isValid);
+    }, {
+        key: 'stop',
+        value: function stop() {
+            this.form.validating(false);
+            this.form.trigger(XValidate.Constants.events.validated);
+        }
+    }, {
+        key: 'validate',
+        value: function validate() {
+            if (this.form.validating() === true) {
+                return;
             }
-        }).fail(function () {}).always(function () {
-            this.stop();
-        });
-    }
 
-    createRequests(targets) {
-        return $.map(targets, function (target) {
+            this.start();
+
+            var targets = this.form.targets();
+            var requests = this.createRequests(targets);
+            var form = this.form;
+            Promise.all(requests).then(function (results) {
+                for (var i = 0; i < results.length; i++) {
+                    var target = targets[i];
+                    // todo: handle multiple vals per target
+                    form.hideErrors(target);
+                    var result = results.length === 1 ? results[0] : results[i][0];
+                    // todo: configure result eval. ***Plugin***
+                    var isValid = result === true;
+                    target.valid(isValid);
+                }
+            });
+        }
+    }, {
+        key: 'createRequest',
+        value: function createRequest(target) {
             return $.ajax({
                 url: target.url(),
                 data: target.data()
             });
-        });
-    }
-};
+        }
+    }, {
+        key: 'createRequests',
+        value: function createRequests(targets) {
+            var _this3 = this;
+
+            return $.map(targets, function (target) {
+                return _this3.createRequest(target);
+            });
+        }
+    }], [{
+        key: 'events',
+        get: function get() {
+            return {
+                validating: 'xval.validating',
+                validated: 'xval.validated'
+            };
+        }
+    }]);
+
+    return Validator;
+}();
 
 (function ($) {
     $.fn.xvalidate = function (options) {
         return this.each(function () {
             var form = new XValidate.Form($(this));
             var validator = new XValidate.Validator(form);
-            form.onValidateRequired(validator.validate);
+            form.onValidateRequired(function () {
+                return validator.validate();
+            });
         });
     };
 })(jQuery);

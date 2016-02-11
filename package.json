@@ -11,14 +11,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://kurthamilton@github.com/kurthamilton/xvalidate.git"
+    "url": "https://github.com/kurthamilton/xvalidate"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/kurthamilton/xvalidate/issues"
   },
-  "homepage": "https://github.com/kurthamilton/xvalidate#readme",
+  "homepage": "https://github.com/kurthamilton/xvalidate",
   "devDependencies": {
     "babel-preset-es2015": "^6.5.0",
     "gulp": "^3.9.1",
