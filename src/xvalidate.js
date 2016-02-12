@@ -1,6 +1,8 @@
 'use strict';
 
 var XValidate = window.XValidate || {};
+
+// classes
 (function ($, X) {
     const utils = { 
         data: function($element, name, value) {
@@ -34,6 +36,8 @@ var XValidate = window.XValidate || {};
             validated: 'xval.validated'		// Triggered on the form when validation ends.
         }
     };
+    
+    let plugins = {};
     
     $.extend(X, {
         Form: function($form) {
@@ -88,6 +92,26 @@ var XValidate = window.XValidate || {};
             
             return this;
         },
+        Plugin: function(name, callback) {
+            this.name = name;
+            
+            this.validate = function(result) {
+                return callback(result) === true;
+            };
+            
+            return this;
+        },
+        Plugins: {
+            add: function(name, callback) {
+                // todo - validate name. 
+                // don't allow overwrite
+                // verify callback is a function
+                plugins[name] = callback;
+            },
+            get: function(name) {
+                // todo
+            }
+        },
         Target: function(form, $element) {
             var self = this;
             
@@ -118,58 +142,68 @@ var XValidate = window.XValidate || {};
                 return utils.data($element, constants.data.valid, value);
             };
         },
-        Validator: function(form) {
-            var self = this;
-            
-            this.start = function() {
+        Validator: function(form) {            
+            // private functions
+            var start = function() {
                 form.trigger(constants.events.validating);
                 form.validating(true);
                 form.invalidCount(0);
             };
             
-            this.stop = function() {
+            var stop = function() {
                 form.validating(false);
                 form.trigger(constants.events.validated);
             };
             
-            this.validate = function() {
-                if (form.validating() === true) {
-                    return;
-                }
-                
-                self.start();
-                
-                let targets = form.targets();
-                let requests = self.createRequests(targets);        
-                
-                Promise.all(requests)
-                    .then((results) => {
-                            for (let i = 0; i < results.length; i++) {
-                                let target = targets[i];
-                                // todo: handle multiple vals per target
-                                form.hideErrors(target);
-                                let result = results.length === 1 ? results[0] : results[i][0];
-                                // todo: configure result eval. ***Plugin***
-                                let isValid = result === true;
-                                target.valid(isValid);
-                            }                    
-                });        
-            };
-            
-            this.createRequest = function(target) {
+            var createRequest = function(target) {
                 return $.ajax({
                         url: target.url(),
                         data: target.data()
                     });
             };
             
-            this.createRequests = function(targets) {         
-                return $.map(targets, (target) => self.createRequest(target));
+            var createRequests = function(targets) {         
+                return $.map(targets, (target) => createRequest(target));
             };
+            
+            var onFulfilled = function(targets, results) {
+                for (let i = 0; i < results.length; i++) {
+                    let target = targets[i];
+                    // todo: handle multiple vals per target
+                    form.hideErrors(target);
+                    // todo: review this line. Presumably results are just the array of ajax results
+                    let result = results.length === 1 ? results[0] : results[i][0];
+                    // todo: configure result eval. ***Plugin***
+                    let isValid = result === true;
+                    target.valid(isValid);
+                }
+            };
+            
+            var onRejected = function() {
+                
+            };       
+            
+            // public functions
+            this.validate = function() {
+                if (form.validating() === true) {
+                    return;
+                }
+                
+                start();
+                
+                let targets = form.targets();
+                let requests = createRequests(targets);        
+                
+                Promise
+                    .all(requests)
+                    .then((results) => onFulfilled(targets, results), onRejected)
+                    .then(stop);         
+            };                        
         }
     });
 })(jQuery, XValidate);
 
+// jQuery plugin 
 (function ($, X) {
     $.fn.xvalidate = function (options) {
         return this.each(() => {            
@@ -180,6 +214,7 @@ var XValidate = window.XValidate || {};
     };
 })(jQuery, XValidate);
 
+// invoke
 $(function() {
     /*default implementation*/
     let forms = $('[data-xval-form]').xvalidate();

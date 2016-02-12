@@ -1,6 +1,8 @@
 'use strict';
 
 var XValidate = window.XValidate || {};
+
+// classes
 (function ($, X) {
     var utils = {
         data: function data($element, name, value) {
@@ -34,6 +36,8 @@ var XValidate = window.XValidate || {};
             validated: 'xval.validated' // Triggered on the form when validation ends.
         }
     };
+
+    var plugins = {};
 
     $.extend(X, {
         Form: function Form($form) {
@@ -84,6 +88,26 @@ var XValidate = window.XValidate || {};
 
             return this;
         },
+        Plugin: function Plugin(name, callback) {
+            this.name = name;
+
+            this.validate = function (result) {
+                return callback(result) === true;
+            };
+
+            return this;
+        },
+        Plugins: {
+            add: function add(name, callback) {
+                // todo - validate name.
+                // don't allow overwrite
+                // verify callback is a function
+                plugins[name] = callback;
+            },
+            get: function get(name) {
+                // todo
+            }
+        },
         Target: function Target(form, $element) {
             var self = this;
 
@@ -115,58 +139,66 @@ var XValidate = window.XValidate || {};
             };
         },
         Validator: function Validator(form) {
-            var self = this;
-
-            this.start = function () {
+            // private functions
+            var start = function start() {
                 form.trigger(constants.events.validating);
                 form.validating(true);
                 form.invalidCount(0);
             };
 
-            this.stop = function () {
+            var stop = function stop() {
                 form.validating(false);
                 form.trigger(constants.events.validated);
             };
 
-            this.validate = function () {
-                if (form.validating() === true) {
-                    return;
-                }
-
-                self.start();
-
-                var targets = form.targets();
-                var requests = self.createRequests(targets);
-
-                Promise.all(requests).then(function (results) {
-                    for (var i = 0; i < results.length; i++) {
-                        var target = targets[i];
-                        // todo: handle multiple vals per target
-                        form.hideErrors(target);
-                        var result = results.length === 1 ? results[0] : results[i][0];
-                        // todo: configure result eval. ***Plugin***
-                        var isValid = result === true;
-                        target.valid(isValid);
-                    }
-                });
-            };
-
-            this.createRequest = function (target) {
+            var createRequest = function createRequest(target) {
                 return $.ajax({
                     url: target.url(),
                     data: target.data()
                 });
             };
 
-            this.createRequests = function (targets) {
+            var createRequests = function createRequests(targets) {
                 return $.map(targets, function (target) {
-                    return self.createRequest(target);
+                    return createRequest(target);
                 });
+            };
+
+            var onFulfilled = function onFulfilled(targets, results) {
+                for (var i = 0; i < results.length; i++) {
+                    var target = targets[i];
+                    // todo: handle multiple vals per target
+                    form.hideErrors(target);
+                    // todo: review this line. Presumably results are just the array of ajax results
+                    var result = results.length === 1 ? results[0] : results[i][0];
+                    // todo: configure result eval. ***Plugin***
+                    var isValid = result === true;
+                    target.valid(isValid);
+                }
+            };
+
+            var onRejected = function onRejected() {};
+
+            // public functions
+            this.validate = function () {
+                if (form.validating() === true) {
+                    return;
+                }
+
+                start();
+
+                var targets = form.targets();
+                var requests = createRequests(targets);
+
+                Promise.all(requests).then(function (results) {
+                    return onFulfilled(targets, results);
+                }, onRejected).then(stop);
             };
         }
     });
 })(jQuery, XValidate);
 
+// jQuery plugin
 (function ($, X) {
     $.fn.xvalidate = function (options) {
         var _this = this;
@@ -179,6 +211,7 @@ var XValidate = window.XValidate || {};
     };
 })(jQuery, XValidate);
 
+// invoke
 $(function () {
     /*default implementation*/
     var forms = $('[data-xval-form]').xvalidate();
