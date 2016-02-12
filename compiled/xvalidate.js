@@ -1,24 +1,27 @@
 'use strict';
 
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
 var XValidate = window.XValidate || {};
 
 // classes
 (function ($, X) {
     var utils = {
-        data: function data($element, name, value) {
+        // Gets or sets data associated with the element. Gets data if value is undefined, else sets data.
+        data: function data($element, key, value) {
             if (value === undefined) {
-                return $element.data(name);
+                return $element.data(key);
             }
-            $element.data(name, value);
+            $element.data(key, value);
         }
     };
 
     var constants = {
         attr: {
-            data: 'xval-data', // The data to pass to the request. Optional. Key names must be quoted for JSON.parse. Fallback to an object like: { elementname: elementvalue }.
-            element: 'xval', // An element within a form (see below) to be validated. Required.
-            form: 'xval-form', // A form to be validated. Required. Will be validated on submit if a form, else by a button click if anything else.
-            url: 'xval-url', // The url for the request. Required.
+            plugins: 'xval', // An element within a form (see below) to be validated. Required. Set to a comma separated list of plugin names.
+            // Evaluated in order. Wrap in square brackets to hide message if predecessors fail.
+            // Set plugin context in data-xval-{pluginname}. { message: '', url: '', data: { ''somekey'': {0}' } }
+            form: 'xval-form', // A form to be validated. Required. Form elements will be validated on submit. Other elements will be validated on a descendant button click.
             message: 'xval-message-for' // The message displaying the validation message. Optional. Set to the name or id of the element.
         },
         classes: { // CSS classes added by the validator. Can be used for styling
@@ -43,99 +46,146 @@ var XValidate = window.XValidate || {};
         Form: function Form($form) {
             var self = this;
 
-            this.errorLabelFor = function (target) {
-                return $('[data-' + constants.attr.message + '="' + target.name() + '"]', $form);
-            };
-
-            this.hideErrors = function (target) {
-                this.errorLabelFor(target).html('').removeClass(constants.classes.messageInvalid).addClass(constants.classes.messageValid);
-            };
-
-            this.invalidCount = function (value) {
-                return utils.data($form, constants.data.invalidCount, value);
-            };
-
-            this.onValidateRequired = function (callback) {
-                if ($form.is('form')) {
-                    $form.on('submit', function (e) {
-                        callback(e);
-                        return false;
-                    });
+            return {
+                errorLabelFor: function errorLabelFor(target) {
+                    return $('[data-' + constants.attr.message + '="' + target.name + '"]', $form);
+                },
+                hideErrors: function hideErrors(target) {
+                    self.errorLabelFor(target).html('').removeClass(constants.classes.messageInvalid).addClass(constants.classes.messageValid);
+                },
+                invalidCount: function invalidCount(value) {
+                    return utils.data($form, constants.data.invalidCount, value);
+                },
+                onValidateRequired: function onValidateRequired(callback) {
+                    if ($form.is('form')) {
+                        $form.on('submit', function (e) {
+                            callback(e);
+                            return false;
+                        });
+                        return;
+                    }
+                    $('button', $form).on('click', callback);
                     return;
+                },
+                showError: function showError(target) {
+                    self.errorLabelFor(target).html(self.errorLabelFor(target).html() + 'error message ').removeClass(constants.classes.messageValid).addClass(constants.classes.messageInvalid);
+                },
+                targets: function targets() {
+                    var $elements = $('[data-' + constants.attr.plugins + ']', $form);
+                    return $.map($elements, function (element) {
+                        return new X.Target(self, $(element));
+                    });
+                },
+                trigger: function trigger(name) {
+                    $form.trigger(name);
+                },
+                validating: function validating(value) {
+                    return utils.data($form, constants.data.validating, value);
                 }
-                $('button', $form).on('click', callback);
-                return;
             };
-
-            this.showError = function (target) {
-                this.errorLabelFor(target).html(self.errorLabelFor(target).html() + 'error message ').removeClass(constants.classes.messageValid).addClass(constants.classes.messageInvalid);
-            };
-
-            this.targets = function () {
-                var elements = $('[data-' + constants.attr.element + ']', $form);
-                return $.map(elements, function (element) {
-                    return new X.Target(self, $(element));
-                });
-            };
-
-            this.trigger = function (name) {
-                $form.trigger(name);
-            };
-
-            this.validating = function (value) {
-                return utils.data($form, constants.data.validating, value);
-            };
-
-            return this;
         },
         Plugin: function Plugin(name, callback) {
-            this.name = name;
-
-            this.validate = function (result) {
-                return callback(result) === true;
+            return {
+                get name() {
+                    return name;
+                },
+                validate: function validate(result) {
+                    return callback(result) === true;
+                }
             };
+        },
+        PluginContext: function PluginContext($element, pluginName) {
+            var self = this;
 
-            return this;
+            var context = JSON.parse(utils.data($element, constants.attr.plugins + '-' + pluginName));
+
+            var dataTemplate = context.data;
+            if (dataTemplate) {
+                context.dataTemplate = JSON.stringify(dataTemplate);
+            } else {
+                context.dataTemplate = '{ "' + ($element[0].name || $element[0].id) + '":"{0}"}';
+            }
+
+            return {
+                data: function data() {
+                    // todo: string interpolation model binding style?
+                    return JSON.parse(self.dataTemplate.replace('{0}', $element.val()));
+                },
+                get dataTemplate() {
+                    return context.dataTemplate;
+                },
+                get message() {
+                    return context.message;
+                },
+                get pluginName() {
+                    return pluginName;
+                },
+                get url() {
+                    return context.url;
+                }
+            };
         },
         Plugins: {
             add: function add(name, callback) {
-                // todo - validate name.
-                // don't allow overwrite
-                // verify callback is a function
+                if (!name || typeof callback !== 'function') {
+                    return;
+                }
+
+                // only allow alpha-numeric, underscore and hyphens in plugin names
+                if (/[^\w|\-]+/.test(name)) {
+                    console.log('invalid plugin name \'' + name + '\'');
+                }
+
+                if (plugins.hasOwnProperty(name)) {
+                    console.log('plugin \'' + name + '\' has already been added');
+                    return;
+                }
+
                 plugins[name] = callback;
             },
+            all: function all() {
+                return plugins;
+            },
             get: function get(name) {
-                // todo
+                return plugins[name];
             }
         },
         Target: function Target(form, $element) {
             var self = this;
 
-            this.data = function () {
-                return JSON.parse(self.dataTemplate().replace('{0}', $element.val()));
-            };
+            var pluginNames = utils.data($element, constants.attr.plugins).split(',');
+            var pluginContexts = $.map(pluginNames, function (pluginName) {
+                return new X.PluginContext($element, pluginName);
+            });
 
-            this.dataTemplate = function () {
-                if ($element[0].hasAttribute('data-' + constants.attr.data)) {
-                    return JSON.stringify(utils.data($element, constants.attr.data));
+            function getPluginContext(pluginName) {
+                return pluginContexts[pluginName];
+            }
+
+            function createRequest(pluginName) {
+                var context = getPluginContext(pluginName);
+                return $.ajax({
+                    url: target.url,
+                    data: target.data()
+                });
+            }
+
+            return {
+                createRequests: function createRequests() {
+                    return $.map(pluginNames, function (pluginName) {
+                        return createRequest;
+                    });
+                },
+                get name() {
+                    return $element[0].name;
+                },
+                valid: function valid(value) {
+                    if (value === false) {
+                        form.invalidCount(form.invalidCount() + 1);
+                        form.showError(self);
+                    }
+                    return utils.data($element, constants.data.valid, value);
                 }
-                return '{ "' + $element[0].name || $element[0].id + '":"{0}"}';
-            };
-
-            this.name = function () {
-                return $element[0].name;
-            };
-
-            this.url = function () {
-                return utils.data($element, constants.attr.url);
-            };
-
-            this.valid = function (value) {
-                if (value === false) {
-                    form.invalidCount(form.invalidCount() + 1);
-                    form.showError(self);
-                }
-                return utils.data($element, constants.data.valid, value);
             };
         },
         Validator: function Validator(form) {
@@ -151,51 +201,51 @@ var XValidate = window.XValidate || {};
                 form.trigger(constants.events.validated);
             };
 
-            var createRequest = function createRequest(target) {
-                return $.ajax({
-                    url: target.url(),
-                    data: target.data()
-                });
-            };
-
             var createRequests = function createRequests(targets) {
-                return $.map(targets, function (target) {
-                    return createRequest(target);
-                });
+                var requests = [];
+                // todo: review this loop within a loop
+                for (var t = 0; t < targets.length; t++) {
+                    requests.push.apply(requests, _toConsumableArray(targets(t).createRequests()));
+                }
+
+                return requests;
             };
 
             var onFulfilled = function onFulfilled(targets, results) {
                 for (var i = 0; i < results.length; i++) {
-                    var target = targets[i];
+                    var _target = targets[i];
                     // todo: handle multiple vals per target
-                    form.hideErrors(target);
+                    form.hideErrors(_target);
                     // todo: review this line. Presumably results are just the array of ajax results
                     var result = results.length === 1 ? results[0] : results[i][0];
                     // todo: configure result eval. ***Plugin***
                     var isValid = result === true;
-                    target.valid(isValid);
+                    _target.valid(isValid);
                 }
             };
 
             var onRejected = function onRejected() {};
 
-            // public functions
-            this.validate = function () {
-                if (form.validating() === true) {
-                    return;
+            return {
+                validate: function validate() {
+                    if (form.validating() === true) {
+                        return;
+                    }
+
+                    start();
+
+                    var targets = form.targets();
+                    var requests = createRequests(targets);
+
+                    Promise.all(requests).then(function (results) {
+                        return onFulfilled(targets, results);
+                    }, onRejected).then(stop);
                 }
-
-                start();
-
-                var targets = form.targets();
-                var requests = createRequests(targets);
-
-                Promise.all(requests).then(function (results) {
-                    return onFulfilled(targets, results);
-                }, onRejected).then(stop);
             };
         }
     });
+
+    return X;
 })(jQuery, XValidate);
 
 // jQuery plugin

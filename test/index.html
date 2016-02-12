@@ -7,20 +7,18 @@
 		<div class="form-group">
 			Field 1
 			<input type="text" name="field1"
-				data-xval="field1" 
-				data-xval-url="http://jsonplaceholder.typicode.com/users/"
-				data-xval-data="{ ""val"": {0} }"
-				data-xval-plugin="test"
+                data-xval="test-plugin,[optional-plugin]"
+                data-xval-test-plugin="{ 'message': 'test-plugin message', 'url': 'http://jsonplaceholder.typicode.com/users/', 'dataX': 'use default data' }"
+                data-xval-optional-plugin="{ 'message': 'optional-plugin message. I SHOULD NOT BE VISIBLE', 'url': 'http://jsonplaceholder.typicode.com/users/', 'dataX': 'use default data' }"
 				/>
 			<span data-xval-message-for="field1"></span>
 		</div>
 		<div class="form-group">
 			Field 2
 			<input type="text" name="field2"
-				data-xval="field2" 
-				data-xval-url="http://jsonplaceholder.typicode.com/users/"
-				data-xval-data="{0}"
-				data-xval-plugin="test"
+				data-xval="plugin1,plugin2"
+                data-xval-plugin1="{ 'message': 'Plugin1 message', 'url': 'http://jsonplaceholder.typicode.com/users/', 'data': '{0}' }"
+                data-xval-plugin2="{ 'message': 'Plugin2 message', 'url': 'http://jsonplaceholder.typicode.com/users/', 'data': '{ ''key'': {0} }' }"
 				/>
 			<span data-xval-message-for="field2"></span>
 		</div>
@@ -30,5 +28,6 @@
 	</form>
 	<script src="js/lib/jquery-2.2.0.min.js"></script>
 	<script src="../src/xvalidate.js"></script>
+    <script src="js/test.js"></script>
 </body>
 </html>
