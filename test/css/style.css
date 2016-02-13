@@ -1,0 +1,10 @@
+section {
+    margin: 20px;
+    border: 1px solid #ccc;
+    padding: 15px;
+}
+
+.form-group {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}

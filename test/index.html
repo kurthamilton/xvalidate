@@ -1,31 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
 </head>
 <body>
-	<form data-xval-form>
-		<div class="form-group">
-			Field 1
-			<input type="text" name="field1"
-                data-xval="test-plugin,[optional-plugin]"
-                data-xval-test-plugin="{ 'message': 'test-plugin message', 'url': 'http://jsonplaceholder.typicode.com/users/', 'dataX': 'use default data' }"
-                data-xval-optional-plugin="{ 'message': 'optional-plugin message. I SHOULD NOT BE VISIBLE', 'url': 'http://jsonplaceholder.typicode.com/users/', 'dataX': 'use default data' }"
-				/>
-			<span data-xval-message-for="field1"></span>
-		</div>
-		<div class="form-group">
-			Field 2
-			<input type="text" name="field2"
-				data-xval="plugin1,plugin2"
-                data-xval-plugin1="{ 'message': 'Plugin1 message', 'url': 'http://jsonplaceholder.typicode.com/users/', 'data': '{0}' }"
-                data-xval-plugin2="{ 'message': 'Plugin2 message', 'url': 'http://jsonplaceholder.typicode.com/users/', 'data': '{ ''key'': {0} }' }"
-				/>
-			<span data-xval-message-for="field2"></span>
-		</div>
-		<div class="form-group">
-			<button type="submit">Submit</button>
-		</div>
-	</form>
+	<section>
+        <form data-xval-form>
+            A &lt;form&gt;
+            
+            <div class="form-group">
+                Field 1
+                <input type="text" name="field1" data-xval-plugins="test-plugin,non-existent-plugin" />
+                <span data-xval-message-for="field1"></span>
+            </div>
+            <div class="form-group">
+                Field 2
+                <input type="text" name="field2" data-xval-plugins="plugin1,plugin2" />
+                <span data-xval-message-for="field2"></span>
+            </div>
+            <div class="form-group">
+                <button type="submit">Submit</button>
+            </div>
+        </form>
+    </section>
+    <section data-xval-form>
+        A &lt;section&gt;
+        
+        <div class="form-group">
+                Field 10
+                <input type="text" name="field10" data-xval-plugins="test-plugin" />
+                <span data-xval-message-for="field10"></span>
+            </div>
+            <div class="form-group">
+                Field 11
+                <input type="text" name="field11" data-xval-plugins="plugin1,plugin2" />
+                <span data-xval-message-for="field11"></span>
+            </div>
+            <div class="form-group">
+                <button>Submit</button>
+            </div>
+    </section>
 	<script src="js/lib/jquery-2.2.0.min.js"></script>
 	<script src="../src/xvalidate.js"></script>
     <script src="js/test.js"></script>
