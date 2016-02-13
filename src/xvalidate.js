@@ -109,6 +109,7 @@ var XValidate = window.XValidate || {};
         let validations = [];
         
         // todo: handle dynamic forms
+        // todo: handle forms within forms
         let $targets = $('[' + constants.attr.plugins + ']', $form); 
         $targets.each(function() {
             let target = new Target(self, $(this));
