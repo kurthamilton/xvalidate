@@ -8,7 +8,7 @@ Decorate your form and elements. Validation will be triggered by a form submit.
 ```html
 <form data-xval-form>
   <input type="text" name="myControl" data-xval-plugins="myPlugin,myOtherPlugin" />
-  <span data-xval-message-form="myControl"></span>
+  <span data-xval-message-for="myControl"></span>
 </form>
 ```
 
