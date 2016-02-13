@@ -28,11 +28,10 @@ var plugins = {
     plugin2: {
         name: 'plugin2',
         url: 'http://jsonplaceholder.typicode.com/users/',
-        message: 'Plugin2 error'
+        message: 'Plugin2 error. I should be valid.',
+        callback: function(result) {
+            return true;
+        }
     }
 };
-XValidate.Plugins.add(plugins.test);
-XValidate.Plugins.add(plugins.duplicateTest);
-XValidate.Plugins.add(plugins.optional);
-XValidate.Plugins.add(plugins.plugin1);
-XValidate.Plugins.add(plugins.plugin2);
+XValidate.Plugins.addRange(plugins);

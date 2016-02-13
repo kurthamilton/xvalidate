@@ -1,3 +1,4 @@
+/*layout*/
 section {
     margin: 20px;
     border: 1px solid #ccc;
@@ -7,4 +8,20 @@ section {
 .form-group {
     margin-top: 10px;
     margin-bottom: 10px;
+}
+
+/*my custom XValidation styles*/
+
+.validation-target.x-validating {
+    border: 1px solid darkorange;
+}
+.validation-target--invalid {
+    border: 1px solid red;
+}
+
+.validation-message.x-validating {
+    color: darkorange;
+}
+.validation-message--invalid {
+    color: red;
 }
