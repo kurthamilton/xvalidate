@@ -18,13 +18,15 @@ var XValidate = window.XValidate || {};
 
     var constants = {
         attr: {
-            // An element within a form (see below) to be validated. Required. Set to a comma separated list of plugin names.
-            // Add an accompanying plugin via XValidate.Plugins.add(options).
-            plugins: 'data-xval-plugins',
             // A form to be validated. Required. Form elements will be validated on submit. Other elements will be validated on a descendant button click.
             form: 'data-xval-form',
-            // The message displaying the validation message. Optional. Set to the name or id of the element.
-            message: 'data-xval-message-for'
+            // The plugins an element within a form requires to be validated. Required. Set to a comma separated list of plugin names.
+            // Add an accompanying plugin via XValidate.Plugins.add(options).
+            plugins: 'data-xval-plugins',
+            // The message displaying the validation message. Optional. Set to the name of the element.
+            message: 'data-xval-message-for',
+            // The element whose click event triggers a form validation. Optional. Not required if validating a form element or a non-form element with a button.
+            submit: 'data-xval-submit'
         },
         // CSS classes added by the validator. Can be used for styling
         classes: {
@@ -44,7 +46,7 @@ var XValidate = window.XValidate || {};
         events: {
             // Triggered on the form when validation starts.
             validating: 'xval.validating',
-            // Triggered on the form when validation ends.
+            // Triggered on the form when validation ends. Returns event args with params: valid
             validated: 'xval.validated'
         }
     };
@@ -109,12 +111,14 @@ var XValidate = window.XValidate || {};
             var validations = [];
 
             // todo: handle dynamic forms
-            // todo: handle nested forms
-            var $targets = $('[' + constants.attr.plugins + ']', $form);
+            var $nestedTargets = $('[' + constants.attr.form + '] [' + constants.attr.plugins + ']', $form);
+            var $targets = $('[' + constants.attr.plugins + ']', $form).not($nestedTargets);
             $targets.each(function () {
                 var target = new Target(self, $(this));
-                targets.push(target);
-                validations.push.apply(validations, _toConsumableArray(target.validations));
+                if (target.validations.length > 0) {
+                    targets.push(target);
+                    validations.push.apply(validations, _toConsumableArray(target.validations));
+                }
             });
 
             /* set up messages */
@@ -155,7 +159,7 @@ var XValidate = window.XValidate || {};
                     });
                     return;
                 }
-                $('button', this.$form).on('click', callback);
+                $('button,[' + constants.attr.submit + ']', this.$form).on('click', callback);
                 return;
             }
         }, {
@@ -172,7 +176,9 @@ var XValidate = window.XValidate || {};
             value: function onValidateStop() {
                 this.validating = false;
                 this.setChildrenValidating(false);
-                this.trigger(constants.events.validated);
+                this.trigger(constants.events.validated, {
+                    valid: this.invalidCount === 0
+                });
             }
         }, {
             key: 'setChildrenValidating',
@@ -190,8 +196,8 @@ var XValidate = window.XValidate || {};
             }
         }, {
             key: 'trigger',
-            value: function trigger(name) {
-                this.$form.trigger(name);
+            value: function trigger(eventType, e) {
+                this.$form.trigger(eventType, e);
             }
         }, {
             key: 'invalidCount',
@@ -251,6 +257,8 @@ var XValidate = window.XValidate || {};
                 var plugin = Plugins.get(pluginName);
                 if (plugin) {
                     validations.push(new Validation(_this, plugin));
+                } else {
+                    console.log('plugin ' + pluginName + ' not found');
                 }
             });
 

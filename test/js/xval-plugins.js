@@ -32,6 +32,13 @@ var plugins = {
         callback: function(result) {
             return true;
         }
+    },
+    nestedPlugin: {
+        name: 'nested-plugin',
+        url: 'http://jsonplaceholder.typicode.com/users/'
     }
 };
 XValidate.Plugins.addRange(plugins);
+
+// test the validated callback
+$('#nested2').on('xval.validated', (event, args) => alert(args.valid));

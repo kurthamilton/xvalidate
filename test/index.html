@@ -7,7 +7,7 @@
 	<section>
         <form data-xval-form>
             A &lt;form&gt;
-            
+
             <div class="form-group">
                 Field 1
                 <input type="text" name="field1" data-xval-plugins="test-plugin,non-existent-plugin" />
@@ -19,13 +19,34 @@
                 <span data-xval-message-for="field2"></span>
             </div>
             <div class="form-group">
+                no plugin
+                <input type="text" name="fieldX" data-xval-plugins="" />
+                <span data-xval-message-for="fieldX"></span>
+            </div>
+            <div id="nested1" data-xval-form>
+                <div class="form-group">
+                    Nested
+                    <input type="text" name="field3" data-xval-plugins="nested-plugin" />
+                    <button type="button">Add</button>
+                    <span data-xval-message-for="field3"></span>
+                </div>
+            </div>
+            <div id="nested2" data-xval-form>
+                <div class="form-group">
+                    Nested
+                    <input type="text" name="field4" data-xval-plugins="nested-plugin" />
+                    <a href="#" data-xval-submit>Add</a>
+                    <span data-xval-message-for="field4"></span>
+                </div>
+            </div>
+            <div class="form-group">
                 <button type="submit">Submit</button>
             </div>
         </form>
     </section>
     <section data-xval-form>
         A &lt;section&gt;
-        
+
         <div class="form-group">
                 Field 10
                 <input type="text" name="field10" data-xval-plugins="test-plugin" />
@@ -43,6 +64,6 @@
 	<script src="js/lib/jquery-2.2.0.min.js"></script>
     <!--<script src="js/lib/jquery-1.11.3.min.js"></script>-->
 	<script src="../src/xvalidate.js"></script>
-    <script src="js/test.js"></script>
+    <script src="js/xval-plugins.js"></script>
 </body>
 </html>
