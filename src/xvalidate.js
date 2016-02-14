@@ -99,6 +99,10 @@ var XValidate = window.XValidate || {};
         }
     };
 
+    // store the fields required by the validation
+    // todo: optimise this
+    let fieldMap = {};
+
     class Form {
         constructor($form) {
             let self = this;
@@ -119,7 +123,6 @@ var XValidate = window.XValidate || {};
             });
 
             /* set up messages */
-            // todo: move message to target. This would mean a selector per target, unless it is passed in to the constructor
             let messages = {};
             $(`[${constants.attr.message}]`, $form).each(function() {
                 let message = $(this);
@@ -205,6 +208,34 @@ var XValidate = window.XValidate || {};
 
     class Plugin {
         constructor(options) {
+
+            /* parse data. Currently supports a 1-level object with string values formatted like ${fieldName} or [${fieldName}] for an array */
+            let data = options.data;
+
+            // todo: much more work! consider things like arrays and complex objects. Move this into its own function
+            if (typeof data === 'object') {
+                $.each(data, (key, value) => {
+                    if (typeof value === 'string') {
+                        // match strings containing strings like ${field-name} or [${field-name}]
+                        // todo: match pair of brackets. This currently allows unbalanced brackets
+                        let fieldRegex = /^\[?(\$\{(\S+)\})\]?$/g;
+                        let matches = fieldRegex.exec(value);
+                        if (matches) {
+                            let isArray = false;
+                            let template = value;
+                            if (template.startsWith('[') && template.endsWith(']')) {
+                                isArray = true;
+                                template = template.substring(1, template.length - 1);
+                            }
+                            let fieldName = matches[2];
+                            if (!fieldMap.hasOwnProperty(fieldName)) {
+                                fieldMap[fieldName] = document.getElementsByName(fieldName);
+                            }
+                        }
+                    }
+                });
+            }
+
             this.callback = options.callback;
             this.data = options.data;
             this.message = options.message;
@@ -226,11 +257,13 @@ var XValidate = window.XValidate || {};
 
             let pluginNames = $element.attr(constants.attr.plugins).split(',');
             $.each(pluginNames, (i, pluginName) => {
-                let plugin = Plugins.get(pluginName);
-                if (plugin) {
-                    validations.push(new Validation(this, plugin));
-                } else {
-                    console.log(`plugin ${pluginName} not found`);
+                if (pluginName) {
+                    let plugin = Plugins.get(pluginName);
+                    if (plugin) {
+                        validations.push(new Validation(this, plugin));
+                    } else {
+                        console.log(`plugin ${pluginName} not found`);
+                    }
                 }
             });
 

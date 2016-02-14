@@ -1,5 +1,7 @@
 'use strict';
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
@@ -105,6 +107,10 @@ var XValidate = window.XValidate || {};
         }
     };
 
+    // store the fields required by the validation
+    // todo: optimise this
+    var fieldMap = {};
+
     var Form = function () {
         function Form($form) {
             _classCallCheck(this, Form);
@@ -127,7 +133,6 @@ var XValidate = window.XValidate || {};
             });
 
             /* set up messages */
-            // todo: move message to target. This would mean a selector per target, unless it is passed in to the constructor
             var messages = {};
             $('[' + constants.attr.message + ']', $form).each(function () {
                 var message = $(this);
@@ -229,6 +234,33 @@ var XValidate = window.XValidate || {};
         function Plugin(options) {
             _classCallCheck(this, Plugin);
 
+            /* parse data. Currently supports a 1-level object with string values formatted like ${fieldName} or [${fieldName}] for an array */
+            var data = options.data;
+
+            // todo: much more work! consider things like arrays and complex objects. Move this into its own function
+            if ((typeof data === 'undefined' ? 'undefined' : _typeof(data)) === 'object') {
+                $.each(data, function (key, value) {
+                    if (typeof value === 'string') {
+                        // match strings containing strings like ${field-name} or [${field-name}]
+                        // todo: match pair of brackets. This currently allows unbalanced brackets
+                        var fieldRegex = /^\[?(\$\{(\S+)\})\]?$/g;
+                        var matches = fieldRegex.exec(value);
+                        if (matches) {
+                            var isArray = false;
+                            var template = value;
+                            if (template.startsWith('[') && template.endsWith(']')) {
+                                isArray = true;
+                                template = template.substring(1, template.length - 1);
+                            }
+                            var fieldName = matches[2];
+                            if (!fieldMap.hasOwnProperty(fieldName)) {
+                                fieldMap[fieldName] = document.getElementsByName(fieldName);
+                            }
+                        }
+                    }
+                });
+            }
+
             this.callback = options.callback;
             this.data = options.data;
             this.message = options.message;
@@ -259,11 +291,13 @@ var XValidate = window.XValidate || {};
 
             var pluginNames = $element.attr(constants.attr.plugins).split(',');
             $.each(pluginNames, function (i, pluginName) {
-                var plugin = Plugins.get(pluginName);
-                if (plugin) {
-                    validations.push(new Validation(_this, plugin));
-                } else {
-                    console.log('plugin ' + pluginName + ' not found');
+                if (pluginName) {
+                    var plugin = Plugins.get(pluginName);
+                    if (plugin) {
+                        validations.push(new Validation(_this, plugin));
+                    } else {
+                        console.log('plugin ' + pluginName + ' not found');
+                    }
                 }
             });
 

@@ -2,6 +2,11 @@ var plugins = {
     test: {
         name: 'test-plugin',
         url: 'http://jsonplaceholder.typicode.com/users/',
+        data: {
+            key: '${field1}',
+            others: '[${fields1}]'
+        },
+        message: '',
         callback: function(result) {
             console.log(result);
             return false;
