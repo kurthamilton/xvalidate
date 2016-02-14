@@ -13,10 +13,10 @@ section {
 /*my custom XValidation styles*/
 
 .validation-target.x-validating {
-    border: 1px solid darkorange;
+    border-color: darkorange;
 }
 .validation-target--invalid {
-    border: 1px solid red;
+    border-color: red;
 }
 
 .validation-message.x-validating {

@@ -11,15 +11,8 @@ var XValidate = window.XValidate || {};
 (function ($, X) {
     var utils = {
         // adds or removes the class from the element based on the set value.
-        class: function _class($element, className, set) {
+        setClass: function setClass($element, className, set) {
             return set === true ? $element.addClass(className) : $element.removeClass(className);
-        },
-        // Gets or sets data associated with the element. Gets data if value is undefined, else sets data.
-        data: function data($element, key, value) {
-            if (value === undefined) {
-                return $element.data(key);
-            }
-            return $element.data(key, value);
         }
     };
 
@@ -112,43 +105,41 @@ var XValidate = window.XValidate || {};
 
             var self = this;
 
-            this.$form = $form;
             /* set up targets and validations */
-
-            var targets = this.targets = {};
-            var validations = this.validations = [];
+            var targets = [];
+            var validations = [];
 
             // todo: handle dynamic forms
-            // todo: handle forms within forms
+            // todo: handle nested forms
             var $targets = $('[' + constants.attr.plugins + ']', $form);
             $targets.each(function () {
                 var target = new Target(self, $(this));
-                targets[target.name] = target;
+                targets.push(target);
                 validations.push.apply(validations, _toConsumableArray(target.validations));
             });
 
             /* set up messages */
             // todo: move message to target. This would mean a selector per target, unless it is passed in to the constructor
-            var messages = this.messages = {};
+            var messages = {};
             $('[' + constants.attr.message + ']', $form).each(function () {
                 var message = $(this);
                 message.addClass(constants.classes.message);
                 var targetName = message.attr(constants.attr.message);
                 messages[targetName] = message;
             });
+
+            this.$form = $form;
+            this.messages = messages;
+            this.targets = targets;
+            this.validations = validations;
         }
 
         _createClass(Form, [{
-            key: 'hideMessages',
-            value: function hideMessages() {
+            key: 'clearMessages',
+            value: function clearMessages() {
                 $.each(this.messages, function (key, message) {
-                    message.html('').removeClass(constants.classes.messageInvalid);
+                    return message.html('').removeClass(constants.classes.messageInvalid);
                 });
-            }
-        }, {
-            key: 'invalidCount',
-            value: function invalidCount(value) {
-                return utils.data(this.$form, constants.data.invalidCount, value);
             }
         }, {
             key: 'messageFor',
@@ -169,40 +160,61 @@ var XValidate = window.XValidate || {};
                 return;
             }
         }, {
+            key: 'setChildrenValidating',
+            value: function setChildrenValidating(value) {
+                // update target validating values
+                $.each(this.targets, function (i, target) {
+                    target.validating = value;
+                    return true; // to stay in loop
+                });
+
+                // add or remove validating css class on messages
+                $.each(this.messages, function (key, message) {
+                    return utils.setClass(message, constants.classes.validating, value);
+                });
+            }
+        }, {
+            key: 'startValidating',
+            value: function startValidating() {
+                this.trigger(constants.events.validating);
+                this.validating = true;
+                this.setChildrenValidating(true);
+                this.clearMessages();
+                this.invalidCount = 0;
+            }
+        }, {
             key: 'showError',
             value: function showError(target, messageText) {
                 var message = this.messageFor(target);
                 message.html(message.html() + messageText + ' ').addClass(constants.classes.messageInvalid);
             }
         }, {
+            key: 'stopValidating',
+            value: function stopValidating() {
+                this.validating = false;
+                this.setChildrenValidating(false);
+                this.trigger(constants.events.validated);
+            }
+        }, {
             key: 'trigger',
             value: function trigger(name) {
                 this.$form.trigger(name);
             }
-
-            /** Gets or sets a value indicating the form is validating. */
-
+        }, {
+            key: 'invalidCount',
+            get: function get() {
+                return this.$form.data(constants.data.invalidCount);
+            },
+            set: function set(value) {
+                this.$form.data(constants.data.invalidCount, value);
+            }
         }, {
             key: 'validating',
-            value: function validating(isValidating) {
-                // update targets and messages if setting a value
-                if (isValidating !== undefined) {
-                    // hide messages if validating
-                    if (isValidating === true) {
-                        this.hideMessages();
-                    }
-
-                    // set or remove validating css class on targets and messages
-                    $.each(this.targets, function (key, target) {
-                        return target.validating(isValidating);
-                    });
-                    $.each(this.messages, function (key, message) {
-                        return utils.class(message, constants.classes.validating, isValidating);
-                    });
-                }
-
-                // set data on form
-                return utils.data(this.$form, constants.data.validating, isValidating);
+            get: function get() {
+                return this.$form.data(constants.data.validating);
+            },
+            set: function set(value) {
+                this.$form.data(constants.data.validating, value);
             }
         }]);
 
@@ -236,46 +248,42 @@ var XValidate = window.XValidate || {};
 
             _classCallCheck(this, Target);
 
-            /* set up validations */
-            var pluginNameString = $element.attr(constants.attr.plugins);
-            if (!pluginNameString) {
-                return;
-            }
-
             $element.addClass(constants.classes.target);
 
-            var pluginNames = pluginNameString.split(',');
-            var validations = this.validations = [];
+            /* set up validations */
+            var validations = [];
+
+            var pluginNames = $element.attr(constants.attr.plugins).split(',');
             $.each(pluginNames, function (i, pluginName) {
                 var plugin = Plugins.get(pluginName);
                 if (plugin) {
-                    var validation = new Validation(_this, plugin);
-                    validations.push(validation);
+                    validations.push(new Validation(_this, plugin));
                 }
             });
 
             this.$element = $element;
             this.form = form;
             this.name = $element[0].name;
+            this.validations = validations;
         }
 
         _createClass(Target, [{
-            key: 'valid',
-            value: function valid(isValid, message) {
+            key: 'setValid',
+            value: function setValid(isValid, message) {
                 if (isValid === false) {
-                    this.form.invalidCount(this.form.invalidCount() + 1);
+                    this.form.invalidCount++;
                     this.form.showError(this, message);
                     this.$element.addClass(constants.classes.targetInvalid);
                 }
-                return utils.data(this.$element, constants.data.valid, isValid);
+                this.$element.data(constants.data.valid, isValid);
             }
         }, {
             key: 'validating',
-            value: function validating(isValidating) {
-                if (isValidating === true) {
+            set: function set(value) {
+                if (value === true) {
                     this.$element.removeClass(constants.classes.targetInvalid);
                 }
-                utils.class(this.$element, constants.classes.validating, isValidating);
+                utils.setClass(this.$element, constants.classes.validating, value);
             }
         }]);
 
@@ -314,7 +322,7 @@ var XValidate = window.XValidate || {};
             key: 'validate',
             value: function validate(result) {
                 var isValid = this.plugin.isValid(result);
-                this.target.valid(isValid, this.message());
+                this.target.setValid(isValid, this.message());
             }
         }]);
 
@@ -327,10 +335,12 @@ var XValidate = window.XValidate || {};
 
             _classCallCheck(this, Validator);
 
-            var form = this.form = new Form($form);
+            var form = new Form($form);
             form.onValidateRequired(function () {
                 return _this2.validate();
             });
+
+            this.form = form;
         }
 
         _createClass(Validator, [{
@@ -341,50 +351,36 @@ var XValidate = window.XValidate || {};
             }
         }, {
             key: 'onFulfilled',
-            value: function onFulfilled(validations, results) {
+            value: function onFulfilled(results) {
                 var _this3 = this;
 
                 $.each(results, function (i, result) {
-                    _this3.form.validations[i].validate(result);
+                    return _this3.form.validations[i].validate(result);
                 });
-            }
-        }, {
-            key: 'start',
-            value: function start() {
-                this.form.trigger(constants.events.validating);
-                this.form.validating(true);
-                this.form.invalidCount(0);
-            }
-        }, {
-            key: 'stop',
-            value: function stop() {
-                this.form.validating(false);
-                this.form.trigger(constants.events.validated);
             }
         }, {
             key: 'validate',
             value: function validate() {
                 var _this4 = this;
 
-                if (this.form.validating() === true) {
+                if (this.form.validating === true) {
                     return;
                 }
 
-                this.start();
+                this.form.startValidating();
 
-                var validations = this.form.validations;
-                var requests = $.map(validations, function (validation) {
+                var requests = $.map(this.form.validations, function (validation) {
                     return validation.createRequest();
                 });
 
                 Promise.all(requests).then(function (results) {
-                    return _this4.onFulfilled(validations, results);
+                    return _this4.onFulfilled(results);
                 }, function (reason) {
                     return _this4.onFail(reason);
                 }).catch(function (reason) {
                     return _this4.onFail(reason);
                 }).then(function () {
-                    return _this4.stop();
+                    return _this4.form.stopValidating();
                 });
             }
         }]);
