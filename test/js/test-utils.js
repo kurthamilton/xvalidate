@@ -1,0 +1,2 @@
+$testFixture = $('#qunit-fixture');
+

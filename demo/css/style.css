@@ -12,14 +12,14 @@ section {
 
 /*my custom XValidation styles*/
 
-.validation-target.x-validating {
+.validation-target.validating {
     border-color: darkorange;
 }
 .validation-target--invalid {
     border-color: red;
 }
 
-.validation-message.x-validating {
+.validation-message.validating {
     color: darkorange;
 }
 .validation-message--invalid {

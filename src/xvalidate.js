@@ -22,14 +22,16 @@ var XValidate = window.XValidate || {};
             // The element whose click event triggers a form validation. Optional. Not required if validating a form element or a non-form element with a button.
             submit: 'data-xval-submit'
         },
+        // todo: user configured css classes
         // CSS classes added by the validator. Can be used for styling
         classes: {
+            // todo: match bootstrap conventions
             message: 'validation-message',
             messageInvalid: 'validation-message--invalid',
             target: 'validation-target',
             targetInvalid: 'validation-target--invalid',
             // added to the target and message
-            validating: 'x-validating'
+            validating: 'validating'
         },
         // privately used data keys
         data: {
@@ -44,6 +46,9 @@ var XValidate = window.XValidate || {};
             validated: 'xval.validated'
         }
     };
+
+    // expose a public copy of the constants
+    X.Constants = $.extend({}, constants);
 
     let plugins = {};
     let Plugins = X.Plugins = {
