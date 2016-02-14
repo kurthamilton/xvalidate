@@ -3,12 +3,12 @@
 var XValidate = window.XValidate || {};
 
 (function ($, X) {
-    const utils = { 
+    const utils = {
         // adds or removes the class from the element based on the set value.
         class: ($element, className, set) => {
-            return set === true ? $element.addClass(className) : $element.removeClass(className);            
+            return set === true ? $element.addClass(className) : $element.removeClass(className);
         },
-        // Gets or sets data associated with the element. Gets data if value is undefined, else sets data. 
+        // Gets or sets data associated with the element. Gets data if value is undefined, else sets data.
         data: ($element, key, value) => {
             if (value === undefined) {
                 return $element.data(key);
@@ -16,7 +16,7 @@ var XValidate = window.XValidate || {};
             return $element.data(key, value);
         }
     };
-    
+
     const constants = {
         attr: {
             // An element within a form (see below) to be validated. Required. Set to a comma separated list of plugin names.
@@ -37,20 +37,20 @@ var XValidate = window.XValidate || {};
             validating: 'x-validating'
         },
         // privately used data keys
-        data: {                         
+        data: {
             invalidCount: '_xval-invalidCount',
             validating: '_xval-validating',
             valid: '_xval-valid'
         },
         // The events triggered during validation.
-        events: {                       
+        events: {
             // Triggered on the form when validation starts.
             validating: 'xval.validating',
             // Triggered on the form when validation ends.
-            validated: 'xval.validated'		
+            validated: 'xval.validated'
         }
     };
-    
+
     let plugins = {};
     let Plugins = X.Plugins = {
         add: function(options) {
@@ -61,33 +61,33 @@ var XValidate = window.XValidate || {};
                     return result === true;
                 }
             };
-            
+
             options = $.extend(defaults, options);
-            
+
             /* validate options */
             if (!options.name || !options.url) {
                 console.log('plugin name or url not specified');
                 return;
             }
-            
+
             // check callback is a function
             if (typeof options.callback !== 'function') {
                 console.log('callback is not a function');
                 return;
             }
-            
+
             // only allow alpha-numeric, underscore and hyphens in plugin names
             if (/[^\w|\-]+/.test(options.name)) {
                 console.log(`invalid plugin name '${options.name}'`);
                 return;
             }
-            
+
             // enforce unique plugin names
             if (plugins.hasOwnProperty(options.name)) {
                 console.log(`plugin '${options.name}' has already been added`);
                 return;
             }
-            
+
             plugins[options.name] = new Plugin(options);
         },
         addRange: function(items) {
@@ -99,244 +99,232 @@ var XValidate = window.XValidate || {};
             return plugins[name];
         }
     };
-    
-    function Form ($form){
-        let self = this;
-        
-        /* set up targets and validations */
-        
-        let targets = {};
-        let validations = [];
-        
-        // todo: handle dynamic forms
-        // todo: handle forms within forms
-        let $targets = $('[' + constants.attr.plugins + ']', $form); 
-        $targets.each(function() {
-            let target = new Target(self, $(this));
-            
-            if (!target.name) {
-                return true;
-            }
-            
-            targets[target.name] = target;
-            validations.push(...target.validations);
-        });
-        
-        /* set up messages */
-        // todo: move message to target. This would mean a selector per target, unless it is passed in to the constructor
-        let messages = {};
-        $('[' + constants.attr.message + ']', $form).each(function() {
-            let message = $(this);
-            message.addClass(constants.classes.message);
-            let targetName = message.attr(constants.attr.message);
-            messages[targetName] = message;
-        });                  
-                       
-        /* public functions */   
-        this.hideMessages = function() {
-            $.each(messages, (key, message) => {
+
+    class Form {
+        constructor($form) {
+            let self = this;
+
+            this.$form = $form;
+            /* set up targets and validations */
+
+            let targets = this.targets = {};
+            let validations = this.validations = [];
+
+            // todo: handle dynamic forms
+            // todo: handle forms within forms
+            let $targets = $('[' + constants.attr.plugins + ']', $form);
+            $targets.each(function() {
+                let target = new Target(self, $(this));
+                targets[target.name] = target;
+                validations.push(...target.validations);
+            });
+
+            /* set up messages */
+            // todo: move message to target. This would mean a selector per target, unless it is passed in to the constructor
+            let messages = this.messages = {};
+            $('[' + constants.attr.message + ']', $form).each(function() {
+                let message = $(this);
+                message.addClass(constants.classes.message);
+                let targetName = message.attr(constants.attr.message);
+                messages[targetName] = message;
+            });
+        }
+
+        hideMessages() {
+            $.each(this.messages, (key, message) => {
                 message.html('').removeClass(constants.classes.messageInvalid);
             });
-        };
-        this.invalidCount = function(value) {
-            return utils.data($form, constants.data.invalidCount, value);
-        };
-        this.messageFor = function(target) {
-            return messages[target.name];
-        };
-        this.onValidateRequired = function(callback) {                
-            if ($form.is('form')) {
-                $form.on('submit', (e) => {
+        }
+
+        invalidCount(value) {
+            return utils.data(this.$form, constants.data.invalidCount, value);
+        }
+
+        messageFor(target) {
+            return this.messages[target.name];
+        }
+
+        onValidateRequired(callback) {
+            if (this.$form.is('form')) {
+                this.$form.on('submit', (e) => {
                     callback(e);
                     return false;
                 });
                 return;
             }
-            $('button', $form).on('click', callback);
+            $('button', this.$form).on('click', callback);
             return;
-        };
-        this.showError = function(target, messageText) {
-            let message = self.messageFor(target);
+        }
+
+        showError(target, messageText) {
+            let message = this.messageFor(target);
             message.html(message.html() + messageText + ' ').addClass(constants.classes.messageInvalid);
-        };
-        this.trigger = function(name) {
-            $form.trigger(name);
-        };       
-        /** Gets or sets a value indicating the form is validating. */ 
-        this.validating = function(isValidating) {            
+        }
+
+        trigger(name) {
+            this.$form.trigger(name);
+        }
+
+        /** Gets or sets a value indicating the form is validating. */
+        validating(isValidating) {
             // update targets and messages if setting a value
             if (isValidating !== undefined) {
                 // hide messages if validating
                 if (isValidating === true) {
-                    self.hideMessages();
+                    this.hideMessages();
                 }
-                
+
                 // set or remove validating css class on targets and messages
-                $.each(targets, (key, target) => target.validating(isValidating));
-                $.each(messages, (key, message) => utils.class(message, constants.classes.validating, isValidating));
-            }            
-            
+                $.each(this.targets, (key, target) => target.validating(isValidating));
+                $.each(this.messages, (key, message) => utils.class(message, constants.classes.validating, isValidating));
+            }
+
             // set data on form
-            return utils.data($form, constants.data.validating, isValidating);
-        };
-        this.validations = function() {
-            return validations;
-        };       
-    };
-        
-    function Plugin(options) {                                    
-        /* public properties */
-        this.data = options.data;
-        this.message = options.message;  
-        this.name = options.name;
-        this.url = options.url;
-        
-        /* public functions */
-        this.isValid = function(result) {
-            return options.callback(result) === true;
-        };
+            return utils.data(this.$form, constants.data.validating, isValidating);
+        }
     }
 
-    function Target(form, $element) {
-        let self = this;                        
-        
-        /* set up validations */
-        let pluginNameString = $element.attr(constants.attr.plugins);
-        if (!pluginNameString) {
-            return;
+    class Plugin {
+        constructor(options) {
+            this.callback = options.callback;
+            this.data = options.data;
+            this.message = options.message;
+            this.name = options.name;
+            this.url = options.url;
         }
-        
-        $element.addClass(constants.classes.target);
-        
-        let pluginNames = pluginNameString.split(',');
-        let validations = [];
-        $.each(pluginNames, function(i, pluginName) {
-            let validation = new Validation(self, pluginName);
-            if (!validation.plugin) {
-                return true;
-            }
-            
-            validations.push(validation);
-        });
 
-        /* public properties */
-        this.name = $element[0].name;
-        this.validations = validations;
-        
-        /* public functions */                 
-        this.valid = function(isValid, message) {
-            if (isValid === false) {				
-                form.invalidCount(form.invalidCount() + 1);
-                form.showError(self, message);
-                $element.addClass(constants.classes.targetInvalid);
+        isValid(result) {
+            return this.callback(result) === true;
+        }
+    }
+
+    class Target {
+        constructor(form, $element) {
+            /* set up validations */
+            let pluginNameString = $element.attr(constants.attr.plugins);
+            if (!pluginNameString) {
+                return;
             }
-            return utils.data($element, constants.data.valid, isValid);
-        };
-        this.validating = function(isValidating) {
+
+            $element.addClass(constants.classes.target);
+
+            let pluginNames = pluginNameString.split(',');
+            let validations = this.validations = [];
+            $.each(pluginNames, (i, pluginName) => {
+                let plugin = Plugins.get(pluginName);
+                if (plugin) {
+                    let validation = new Validation(this, plugin);
+                    validations.push(validation);
+                }
+            });
+
+            this.$element = $element;
+            this.form = form;
+            this.name = $element[0].name;
+        }
+
+        valid(isValid, message) {
+            if (isValid === false) {
+                this.form.invalidCount(this.form.invalidCount() + 1);
+                this.form.showError(this, message);
+                this.$element.addClass(constants.classes.targetInvalid);
+            }
+            return utils.data(this.$element, constants.data.valid, isValid);
+        }
+
+        validating(isValidating) {
             if (isValidating === true) {
-                $element.removeClass(constants.classes.targetInvalid);                
-            }            
-            utils.class($element, constants.classes.validating, isValidating);
-        };       
-        this.value = function() {
-            return $element.val();
-        };
-    }
-    
-    function Validation(target, pluginName) {
-        let plugin = Plugins.get(pluginName);
-        if (!plugin) {
-            return;
+                this.$element.removeClass(constants.classes.targetInvalid);
+            }
+            utils.class(this.$element, constants.classes.validating, isValidating);
         }
-        
-        function getData() {
+    }
+
+    class Validation {
+        constructor(target, plugin) {
+            this.plugin = plugin;
+            this.target = target;
+        }
+
+        createRequest() {
+            return $.ajax({
+                url: this.plugin.url,
+                data: this.data()
+            });
+        }
+
+        data() {
             // todo: bind plugin.data to form
             return { key: 1 };
         }
-        
-        function getMessage() {
+
+         message() {
             // todo: bind plugin.message to form
-            return plugin.message;
+            return this.plugin.message;
         }
-        
-        /* public properties */
-        this.plugin = plugin;
-        this.target = target;
-        
-        /* public functions */
-        this.createRequest = function() {
-            return $.ajax({
-                url: plugin.url,
-                data: getData()
-            });
-        };        
-        
-        this.validate = function(result) {
-            let isValid = plugin.isValid(result);
-            target.valid(isValid, getMessage());
-        };
-    };
-    
-    function Validator(form) {
-        function start() {
-            form.trigger(constants.events.validating);
-            form.validating(true);
-            form.invalidCount(0);
+
+        validate(result) {
+            let isValid = this.plugin.isValid(result);
+            this.target.valid(isValid, this.message());
         }
-        
-        function stop() {
-            form.validating(false);
-            form.trigger(constants.events.validated);
+    }
+
+    class Validator {
+        constructor($form) {
+            let form = this.form = new Form($form);
+            form.onValidateRequired(() => this.validate());
         }
-        
-        function onFulfilled(validations, results) {
-            $.each(results, (i, result) => {                   
-                validations[i].validate(result);
-            });
-        };
-        
-        function onFail(reason) {
+
+        onFail(reason) {
             console.log('an error has occurred:');
-            console.log(reason);            
-        };
-        
-        /* public functions */   
-        this.validate = function() {
-            if (form.validating() === true) {
+            console.log(reason);
+        }
+
+        onFulfilled(validations, results) {
+            $.each(results, (i, result) => {
+                this.form.validations[i].validate(result);
+            });
+        }
+
+        start() {
+            this.form.trigger(constants.events.validating);
+            this.form.validating(true);
+            this.form.invalidCount(0);
+        }
+
+        stop() {
+            this.form.validating(false);
+            this.form.trigger(constants.events.validated);
+        }
+
+        validate() {
+            if (this.form.validating() === true) {
                 return;
             }
-            
-            start();
-            
-            let validations = form.validations();
-            let requests = $.map(validations, validation => validation.createRequest());        
-            
+
+            this.start();
+
+            let validations = this.form.validations;
+            let requests = $.map(validations, validation => validation.createRequest());
+
             Promise
                 .all(requests)
-                .then(results => onFulfilled(validations, results), onFail)
-                .catch(onFail)
-                .then(stop);
-        };
-        
-        return this;                        
+                .then(results => this.onFulfilled(validations, results), reason => this.onFail(reason))
+                .catch(reason => this.onFail(reason))
+                .then(() => this.stop());
+        }
     }
-    
+
     // jQuery plugin
+    let validators = [];
     $.fn.xvalidate = function (options) {
-        return this.each(function() {            
-            let form = new Form($(this));
-			let validator = new Validator(form);
-            form.onValidateRequired(validator.validate);
-        });
+        return this.each((i, form) => validators.push(new Validator($(form))));
     };
-    
+
     return X;
 })(jQuery, XValidate);
 
- 
-
-// invoke
+// invoke default implementation
 $(function() {
-    /*default implementation*/
     $('[data-xval-form]').xvalidate();
 });
