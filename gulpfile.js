@@ -2,7 +2,7 @@ const gulp = require('gulp');
 const babel = require('gulp-babel');
 const plumber = require('gulp-plumber');
 const sourcePath = 'src/*.js';
-const targetPath = 'compiled';
+const targetPath = 'transpiled';
 
 gulp.task('babel', function () {
     gulp.src([sourcePath])
