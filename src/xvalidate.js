@@ -32,8 +32,7 @@ var XValidate = window.XValidate || {};
         // privately used data keys
         data: {
             invalidCount: '_xval-invalidCount',
-            validating: '_xval-validating',
-            valid: '_xval-valid'
+            validating: '_xval-validating'
         },
         // The events triggered during validation.
         events: {
@@ -163,6 +162,20 @@ var XValidate = window.XValidate || {};
             return;
         }
 
+        onValidateStart() {
+            this.trigger(constants.events.validating);
+            this.validating = true;
+            this.setChildrenValidating(true);
+            this.clearMessages();
+            this.invalidCount = 0;
+        }
+
+        onValidateStop() {
+            this.validating = false;
+            this.setChildrenValidating(false);
+            this.trigger(constants.events.validated);
+        }
+
         setChildrenValidating(value) {
             // update target validating values
             $.each(this.targets, (i, target) => {
@@ -172,25 +185,6 @@ var XValidate = window.XValidate || {};
 
             // add or remove validating css class on messages
             $.each(this.messages, (key, message) => utils.setClass(message, constants.classes.validating, value));
-        }
-
-        startValidating() {
-            this.trigger(constants.events.validating);
-            this.validating = true;
-            this.setChildrenValidating(true);
-            this.clearMessages();
-            this.invalidCount = 0;
-        }
-
-        showError(target, messageText) {
-            let message = this.messageFor(target);
-            message.html(message.html() + messageText + ' ').addClass(constants.classes.messageInvalid);
-        }
-
-        stopValidating() {
-            this.validating = false;
-            this.setChildrenValidating(false);
-            this.trigger(constants.events.validated);
         }
 
         trigger(name) {
@@ -240,13 +234,11 @@ var XValidate = window.XValidate || {};
             utils.setClass(this.$element, constants.classes.validating, value);
         }
 
-        setValid(isValid, message) {
-            if (isValid === false) {
-                this.form.invalidCount++;
-                this.form.showError(this, message);
-                this.$element.addClass(constants.classes.targetInvalid);
-            }
-            this.$element.data(constants.data.valid, isValid);
+        showError(messageText) {
+            this.$element.addClass(constants.classes.targetInvalid);
+            let message = this.form.messageFor(this);
+            message.html(message.html() + messageText + ' ')
+                   .addClass(constants.classes.messageInvalid);
         }
     }
 
@@ -268,14 +260,17 @@ var XValidate = window.XValidate || {};
             return { key: 1 };
         }
 
-         message() {
+        message() {
             // todo: bind plugin.message to form
             return this.plugin.message;
         }
 
         validate(result) {
             let isValid = this.plugin.isValid(result);
-            this.target.setValid(isValid, this.message());
+            if (isValid === false) {
+                this.target.form.invalidCount++;
+                this.target.showError(this.message());
+            }
         }
     }
 
@@ -301,15 +296,15 @@ var XValidate = window.XValidate || {};
                 return;
             }
 
-            this.form.startValidating();
+            this.form.onValidateStart();
 
             let requests = $.map(this.form.validations, validation => validation.createRequest());
 
             Promise
                 .all(requests)
-                .then(results => this.onFulfilled(results), reason => this.onFail(reason))
-                .catch(reason => this.onFail(reason))
-                .then(() => this.form.stopValidating());
+                .then(results => this.onFulfilled(results), this.onFail)
+                .catch(this.onFail)
+                .then(() => this.form.onValidateStop());
         }
     }
 
