@@ -12,6 +12,9 @@ var XValidate = window.XValidate || {};
 
     const constants = {
         attr: {
+            // todo: review this
+            // A field to be bound to a plugin data object.
+            field: 'data-xval-field',
             // A form to be validated. Required. Form elements will be validated on submit. Other elements will be validated on a descendant button click.
             form: 'data-xval-form',
             // The plugins an element within a form requires to be validated. Required. Set to a comma separated list of plugin names.
@@ -47,11 +50,8 @@ var XValidate = window.XValidate || {};
         }
     };
 
-    // expose a public copy of the constants
-    X.Constants = $.extend({}, constants);
-
     let plugins = {};
-    let Plugins = X.Plugins = {
+    let Plugins = {
         add: function(options) {
             let defaults = {
                 message: 'invalid',
@@ -103,7 +103,7 @@ var XValidate = window.XValidate || {};
     // todo: optimise this
     let fieldMap = {};
 
-    class FormModel {
+    class DataTemplate {
         constructor(template) {
 
             let fields = [];
@@ -111,7 +111,7 @@ var XValidate = window.XValidate || {};
             // todo: much more work! consider things like arrays and complex objects. Move this into its own function
             if (typeof template === 'object') {
                 $.each(template, (key, value) => {
-                    let field = FormFieldModel.parse(value);
+                    let field = DataItemTemplate.parse(value);
                     if (field) {
                         fields.push(field);
                         if (!fieldMap.hasOwnProperty(field.fieldName)) {
@@ -129,7 +129,7 @@ var XValidate = window.XValidate || {};
     const fieldNamePattern = '\\$\\{(\\S+)\\}';
     const fieldRegex = new RegExp(`^${fieldNamePattern}|\\[${fieldNamePattern}\\]$`, 'g');
 
-    class FormFieldModel {
+    class DataItemTemplate {
         constructor(fieldName, isArray) {
             this.fieldName = fieldName;
             this.isArray = isArray;
@@ -148,7 +148,7 @@ var XValidate = window.XValidate || {};
 
             let fieldName = matches[1] || matches[2];
             let isArray = matches[2] !== undefined;
-            return new FormFieldModel(fieldName, isArray);
+            return new DataItemTemplate(fieldName, isArray);
         }
     }
 
@@ -179,7 +179,19 @@ var XValidate = window.XValidate || {};
                 let targetName = message.attr(constants.attr.message);
                 messages[targetName] = message;
             });
-
+            
+            /* set up fields. key/value pair of field name / dom element array */
+            let $fields = {};
+            $(`[${constants.attr.field}]`, $form).each(function() {
+                 let $field = $(this);
+                 let fieldName = $field.attr(constants.attr.field);
+                 if (!$fields.hasOwnProperty(fieldName)) {
+                     $fields[fieldName] = [];
+                 }
+                 $fields[fieldName].push($field);
+            });
+            
+            this.$fields = $fields;
             this.$form = $form;
             this.messages = messages;
             this.targets = targets;
@@ -380,7 +392,13 @@ var XValidate = window.XValidate || {};
     $.fn.xvalidate = function (options) {
         return this.each((i, form) => validators.push(new Validator($(form))));
     };
-
+    
+    // expose public functions
+    $.extend(X, {
+        Constants: constants,
+        Plugins: Plugins
+    });
+    
     return X;
 })(jQuery, XValidate);
 

@@ -1,8 +1,8 @@
 'use strict';
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
-
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
@@ -20,6 +20,9 @@ var XValidate = window.XValidate || {};
 
     var constants = {
         attr: {
+            // todo: review this
+            // A field to be bound to a plugin data object.
+            field: 'data-xval-field',
             // A form to be validated. Required. Form elements will be validated on submit. Other elements will be validated on a descendant button click.
             form: 'data-xval-form',
             // The plugins an element within a form requires to be validated. Required. Set to a comma separated list of plugin names.
@@ -55,11 +58,8 @@ var XValidate = window.XValidate || {};
         }
     };
 
-    // expose a public copy of the constants
-    X.Constants = $.extend({}, constants);
-
     var plugins = {};
-    var Plugins = X.Plugins = {
+    var Plugins = {
         add: function add(options) {
             var defaults = {
                 message: 'invalid',
@@ -111,6 +111,63 @@ var XValidate = window.XValidate || {};
     // todo: optimise this
     var fieldMap = {};
 
+    var DataTemplate = function DataTemplate(template) {
+        _classCallCheck(this, DataTemplate);
+
+        var fields = [];
+
+        // todo: much more work! consider things like arrays and complex objects. Move this into its own function
+        if ((typeof template === 'undefined' ? 'undefined' : _typeof(template)) === 'object') {
+            $.each(template, function (key, value) {
+                var field = DataItemTemplate.parse(value);
+                if (field) {
+                    fields.push(field);
+                    if (!fieldMap.hasOwnProperty(field.fieldName)) {
+                        fieldMap[field.fieldName] = document.getElementsByName(field.fieldName);
+                    }
+                }
+            });
+        }
+
+        this.fields = fields;
+    };
+
+    // match strings containing strings like ${field-name} or [${field-name}]
+
+
+    var fieldNamePattern = '\\$\\{(\\S+)\\}';
+    var fieldRegex = new RegExp('^' + fieldNamePattern + '|\\[' + fieldNamePattern + '\\]$', 'g');
+
+    var DataItemTemplate = function () {
+        function DataItemTemplate(fieldName, isArray) {
+            _classCallCheck(this, DataItemTemplate);
+
+            this.fieldName = fieldName;
+            this.isArray = isArray;
+        }
+
+        _createClass(DataItemTemplate, null, [{
+            key: 'parse',
+            value: function parse(value) {
+                if (typeof value !== 'string') {
+                    return null;
+                }
+
+                fieldRegex.lastIndex = 0;
+                var matches = fieldRegex.exec(value);
+                if (!matches) {
+                    return null;
+                }
+
+                var fieldName = matches[1] || matches[2];
+                var isArray = matches[2] !== undefined;
+                return new DataItemTemplate(fieldName, isArray);
+            }
+        }]);
+
+        return DataItemTemplate;
+    }();
+
     var Form = function () {
         function Form($form) {
             _classCallCheck(this, Form);
@@ -141,6 +198,18 @@ var XValidate = window.XValidate || {};
                 messages[targetName] = message;
             });
 
+            /* set up fields. key/value pair of field name / dom element array */
+            var $fields = {};
+            $('[' + constants.attr.field + ']', $form).each(function () {
+                var $field = $(this);
+                var fieldName = $field.attr(constants.attr.field);
+                if (!$fields.hasOwnProperty(fieldName)) {
+                    $fields[fieldName] = [];
+                }
+                $fields[fieldName].push($field);
+            });
+
+            this.$fields = $fields;
             this.$form = $form;
             this.messages = messages;
             this.targets = targets;
@@ -234,35 +303,8 @@ var XValidate = window.XValidate || {};
         function Plugin(options) {
             _classCallCheck(this, Plugin);
 
-            /* parse data. Currently supports a 1-level object with string values formatted like ${fieldName} or [${fieldName}] for an array */
-            var data = options.data;
-
-            // todo: much more work! consider things like arrays and complex objects. Move this into its own function
-            if ((typeof data === 'undefined' ? 'undefined' : _typeof(data)) === 'object') {
-                $.each(data, function (key, value) {
-                    if (typeof value === 'string') {
-                        // match strings containing strings like ${field-name} or [${field-name}]
-                        // todo: match pair of brackets. This currently allows unbalanced brackets
-                        var fieldRegex = /^\[?(\$\{(\S+)\})\]?$/g;
-                        var matches = fieldRegex.exec(value);
-                        if (matches) {
-                            var isArray = false;
-                            var template = value;
-                            if (template.startsWith('[') && template.endsWith(']')) {
-                                isArray = true;
-                                template = template.substring(1, template.length - 1);
-                            }
-                            var fieldName = matches[2];
-                            if (!fieldMap.hasOwnProperty(fieldName)) {
-                                fieldMap[fieldName] = document.getElementsByName(fieldName);
-                            }
-                        }
-                    }
-                });
-            }
-
             this.callback = options.callback;
-            this.data = options.data;
+            this.dataTemplate = options.data;
             this.message = options.message;
             this.name = options.name;
             this.url = options.url;
@@ -433,6 +475,12 @@ var XValidate = window.XValidate || {};
             return validators.push(new Validator($(form)));
         });
     };
+
+    // expose public functions
+    $.extend(X, {
+        Constants: constants,
+        Plugins: Plugins
+    });
 
     return X;
 })(jQuery, XValidate);
