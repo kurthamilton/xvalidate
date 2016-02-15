@@ -41,7 +41,6 @@ XValidate is written in ES6. It is very much an experimental journey for me into
 I am transpiling to ES5 using babel via gulp. To run the gulp task in Node.js, ensure the following are installed in the project folder:
 
 ```
-npm init
 npm install gulp -g
 npm install gulp --save-dev
 npm install gulp-babel --save-dev
