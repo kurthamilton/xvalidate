@@ -3,8 +3,8 @@ var plugins = {
         name: 'test-plugin',
         url: 'http://jsonplaceholder.typicode.com/users/',
         data: {
-            key: '${field1}',
-            others: '[${fields1}]'
+            scalar: '${0}',
+            array: '[${fields1}]'
         },
         message: '',
         callback: function(result) {
@@ -28,6 +28,10 @@ var plugins = {
     plugin1: {
         name: 'plugin1',
         url: 'http://jsonplaceholder.typicode.com/users/',
+        data: {
+            scalar: '${0}',
+            array: '[${fields1}]'
+        },
         message: 'Plugin1 error'
     },
     plugin2: {
