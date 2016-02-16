@@ -17,8 +17,11 @@ You can also validate any other elements as if they were forms. Validation will 
 <div data-xval-form>
   ...
   <button>Add</button>
+  ... OR
+  <a href="#" data-xval-submit>Add</a>
 </div>
 ```
+
 
 And add a corresponding plugin:
 ```javascript
