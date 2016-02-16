@@ -29,8 +29,8 @@ XValidate.plugins.add({
   name: 'myPlugin',
   url: '/myapi/method',
   message: '${0} is already taken',
-  validateResult: function(result){
-    return result.length === 0;
+  validateResponse: function(response){
+    return response.length === 0;
   }
 });
 ```
