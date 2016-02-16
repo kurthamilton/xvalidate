@@ -25,9 +25,8 @@ And add a corresponding plugin:
 XValidate.plugins.add({
   name: 'myPlugin',
   url: '/myapi/method',
-  data: { arg: '{0}' },
-  message: '{0} is empty',
-  callback: function(result){
+  message: '${0} is already taken',
+  validateResult: function(result){
     return result.length === 0;
   }
 });
