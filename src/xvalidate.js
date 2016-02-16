@@ -10,6 +10,7 @@ var XValidate = window.XValidate || {};
         }
     };
 
+    // private constants. A copy of these is exposed publicly. A copy of the classes is taken (and can be overridden when creating a new Form).
     const constants = {
         attr: {
             // A form to be validated. Required. Form elements will be validated on submit. Other elements will be validated on a descendant button click.
@@ -47,8 +48,12 @@ var XValidate = window.XValidate || {};
         }
     };
 
+    // Store all registered plugins
     let plugins = {};
+
+    /** Methods to add and remove validation plugins. */
     let Plugins = {
+        /** Add a new plugin */
         add: function(options) {
             /* validate options */
             if (!options.name || !options.url) {
@@ -56,9 +61,9 @@ var XValidate = window.XValidate || {};
                 return;
             }
 
-            // check validateResult is a function
-            if (options.validateResult && typeof options.validateResult !== 'function') {
-                console.log('validateResult is not a function');
+            // check validateResponse is a function
+            if (options.validateResponse && typeof options.validateResponse !== 'function') {
+                console.log('validateResponse is not a function');
                 return;
             }
 
@@ -82,16 +87,19 @@ var XValidate = window.XValidate || {};
 
             plugins[options.name] = new Plugin(options);
         },
+        /** Add an array of plugins */
         addRange: function(items) {
             $.each(items, key => {
                 Plugins.add(items[key]);
             });
         },
+        /** Get the plugin with the given name */
         get: function(name) {
             return plugins[name];
         }
     };
 
+    /** Wrapper for a DOM element containing elements to be validated.  */
     class Form {
         constructor($form, options) {
             let self = this;
@@ -204,6 +212,7 @@ var XValidate = window.XValidate || {};
         }
     }
 
+    /** A validation plugin. Used to define request and response options. */
     class Plugin {
         constructor(options) {
             let defaults = {
@@ -211,8 +220,8 @@ var XValidate = window.XValidate || {};
                 getData: function(target) {
                     return { [`${target.name}`]: `'${target.value}'` };
                 },
-                validateResult: function(result) {
-                    return result === true;
+                validateResponse: function(response) {
+                    return response === true;
                 }
             };
 
@@ -222,15 +231,16 @@ var XValidate = window.XValidate || {};
             this.message = options.message;
             this.name = options.name;
             this.getData = options.getData;
-            this.validateResult = options.validateResult;
+            this.validateResponse = options.validateResponse;
             this.url = options.url;
         }
 
-        isValid(result) {
-            return this.validateResult(result) === true;
+        isValid(response) {
+            return this.validateResponse(response) === true;
         }
     }
 
+    /** Wrapper for a DOM element that is to be validated */
     class Target {
         constructor(form, $element) {
             $element.addClass(form.classes.target);
@@ -275,6 +285,7 @@ var XValidate = window.XValidate || {};
         }
     }
 
+    /** Validation for an instance of a plugin on a target */
     class Validation {
         constructor(target, plugin) {
             this.plugin = plugin;
@@ -293,8 +304,8 @@ var XValidate = window.XValidate || {};
             return this.plugin.message.replace('${0}', this.target.value);
         }
 
-        validate(result) {
-            let isValid = this.plugin.isValid(result);
+        validate(response) {
+            let isValid = this.plugin.isValid(response);
             if (isValid === false) {
                 this.target.form.valid = false;
                 this.target.showError(this.message());
@@ -302,6 +313,7 @@ var XValidate = window.XValidate || {};
         }
     }
 
+    /** Validator for a form. Orchestrates the requests and responses. */
     class Validator {
         constructor($form, options) {
             let form = new Form($form, options);
@@ -315,8 +327,8 @@ var XValidate = window.XValidate || {};
             console.log(reason);
         }
 
-        onFulfilled(results) {
-            $.each(results, (i, result) => this.form.validations[i].validate(result));
+        onFulfilled(responses) {
+            $.each(responses, (i, response) => this.form.validations[i].validate(response));
         }
 
         validate() {
@@ -330,7 +342,7 @@ var XValidate = window.XValidate || {};
 
             Promise
                 .all(requests)
-                .then(results => this.onFulfilled(results), this.onFail)
+                .then(responses => this.onFulfilled(responses), this.onFail)
                 .catch(this.onFail)
                 .then(() => this.form.onValidateStop());
         }
@@ -342,9 +354,10 @@ var XValidate = window.XValidate || {};
         return this.each((i, form) => validators.push(new Validator($(form), options)));
     };
 
-    // expose public functions
+    // expose public objects
     $.extend(X, {
-        Constants: constants,
+        // take a copy of the constants
+        Constants: $.extend(true, {}, constants),
         Plugins: Plugins
     });
 

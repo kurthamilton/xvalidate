@@ -3,15 +3,15 @@ var plugins = {
         name: 'test-plugin',
         url: 'http://jsonplaceholder.typicode.com/users/',
         message: '',
-        validateResult: function(result) {
-            console.log(result);
+        validateResponse: function(response) {
+            console.log(response);
             return false;
         }
     },
     duplicateTest: {
         name: 'test-plugin',
         url: 'http://jsonplaceholder.typicode.com/users/',
-        validateResult: function(result) {
+        validateResponse: function(response) {
             alert('I am a duplicate plugin');
             return false;
         }
@@ -30,7 +30,7 @@ var plugins = {
         name: 'plugin2',
         url: 'http://jsonplaceholder.typicode.com/users/',
         message: 'Plugin2 error. I should be valid.',
-        validateResult: function(result) {
+        validateResponse: function(response) {
             return true;
         }
     },
