@@ -17,8 +17,11 @@ You can also validate any other elements as if they were forms. Validation will 
 <div data-xval-form>
   ...
   <button>Add</button>
+  ... OR
+  <a href="#" data-xval-submit>Add</a>
 </div>
 ```
+
 
 And add a corresponding plugin:
 ```javascript
@@ -26,8 +29,8 @@ XValidate.plugins.add({
   name: 'myPlugin',
   url: '/myapi/method',
   message: '${0} is already taken',
-  validateResult: function(result){
-    return result.length === 0;
+  validateResponse: function(response){
+    return response.length === 0;
   }
 });
 ```
