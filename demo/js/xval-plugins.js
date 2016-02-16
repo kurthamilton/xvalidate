@@ -24,7 +24,7 @@ var plugins = {
     plugin1: {
         name: 'plugin1',
         url: 'http://jsonplaceholder.typicode.com/users/',
-        message: 'Plugin1 error'
+        message: 'Plugin1 error - ${0}'
     },
     plugin2: {
         name: 'plugin2',

@@ -2,7 +2,7 @@
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
@@ -20,23 +20,20 @@ var XValidate = window.XValidate || {};
 
     var constants = {
         attr: {
-            // todo: review this
-            // A field to be bound to a plugin data object.
-            field: 'data-xval-field',
             // A form to be validated. Required. Form elements will be validated on submit. Other elements will be validated on a descendant button click.
             form: 'data-xval-form',
             // The plugins an element within a form requires to be validated. Required. Set to a comma separated list of plugin names.
             // Add an accompanying plugin via XValidate.Plugins.add(options).
             plugins: 'data-xval-plugins',
-            // The message displaying the validation message. Optional. Set to the name of the element.
+            // The message displaying the validation message. Optional. Set attribute value to the name of the element.
+            // Use ${0} as a placeholder for the value
             message: 'data-xval-message-for',
-            // The element whose click event triggers a form validation. Optional. Not required if validating a form element or a non-form element with a button.
+            // The element whose click event triggers a form validation. Optional. Not required if validating a form element or a non-form element with a button
             submit: 'data-xval-submit'
         },
-        // todo: user configured css classes
-        // CSS classes added by the validator. Can be used for styling
+        // CSS classes added by the validator for styling. Can be overridden by setting options.classes on setup.
         classes: {
-            // todo: match bootstrap conventions
+            // todo: match bootstrap conventions?
             message: 'validation-message',
             messageInvalid: 'validation-message--invalid',
             target: 'validation-target',
@@ -46,7 +43,7 @@ var XValidate = window.XValidate || {};
         },
         // privately used data keys
         data: {
-            invalidCount: '_xval-invalidCount',
+            valid: '_xval-valid',
             validating: '_xval-validating'
         },
         // The events triggered during validation.
@@ -61,25 +58,21 @@ var XValidate = window.XValidate || {};
     var plugins = {};
     var Plugins = {
         add: function add(options) {
-            var defaults = {
-                message: 'invalid',
-                data: '{0}',
-                callback: function callback(result) {
-                    return result === true;
-                }
-            };
-
-            options = $.extend(defaults, options);
-
             /* validate options */
             if (!options.name || !options.url) {
                 console.log('plugin name or url not specified');
                 return;
             }
 
-            // check callback is a function
-            if (typeof options.callback !== 'function') {
-                console.log('callback is not a function');
+            // check validateResult is a function
+            if (options.validateResult && typeof options.validateResult !== 'function') {
+                console.log('validateResult is not a function');
+                return;
+            }
+
+            // check getData is a function
+            if (options.getData && typeof options.getData !== 'function') {
+                console.log('getData is not a function');
                 return;
             }
 
@@ -107,78 +100,21 @@ var XValidate = window.XValidate || {};
         }
     };
 
-    // store the fields required by the validation
-    // todo: optimise this
-    var fieldMap = {};
-
-    var DataTemplate = function DataTemplate(template) {
-        _classCallCheck(this, DataTemplate);
-
-        var fields = [];
-
-        // todo: much more work! consider things like arrays and complex objects. Move this into its own function
-        if ((typeof template === 'undefined' ? 'undefined' : _typeof(template)) === 'object') {
-            $.each(template, function (key, value) {
-                var field = DataItemTemplate.parse(value);
-                if (field) {
-                    fields.push(field);
-                    if (!fieldMap.hasOwnProperty(field.fieldName)) {
-                        fieldMap[field.fieldName] = document.getElementsByName(field.fieldName);
-                    }
-                }
-            });
-        }
-
-        this.fields = fields;
-    };
-
-    // match strings containing strings like ${field-name} or [${field-name}]
-
-
-    var fieldNamePattern = '\\$\\{(\\S+)\\}';
-    var fieldRegex = new RegExp('^' + fieldNamePattern + '|\\[' + fieldNamePattern + '\\]$', 'g');
-
-    var DataItemTemplate = function () {
-        function DataItemTemplate(fieldName, isArray) {
-            _classCallCheck(this, DataItemTemplate);
-
-            this.fieldName = fieldName;
-            this.isArray = isArray;
-        }
-
-        _createClass(DataItemTemplate, null, [{
-            key: 'parse',
-            value: function parse(value) {
-                if (typeof value !== 'string') {
-                    return null;
-                }
-
-                fieldRegex.lastIndex = 0;
-                var matches = fieldRegex.exec(value);
-                if (!matches) {
-                    return null;
-                }
-
-                var fieldName = matches[1] || matches[2];
-                var isArray = matches[2] !== undefined;
-                return new DataItemTemplate(fieldName, isArray);
-            }
-        }]);
-
-        return DataItemTemplate;
-    }();
-
     var Form = function () {
-        function Form($form) {
+        function Form($form, options) {
             _classCallCheck(this, Form);
 
             var self = this;
+
+            // set classes. this is required by the Target constructor
+            this.classes = $.extend({}, constants.classes, options ? options.classes : null);
 
             /* set up targets and validations */
             var targets = [];
             var validations = [];
 
             // todo: handle dynamic forms
+            // todo: optimise this double selector
             var $nestedTargets = $('[' + constants.attr.form + '] [' + constants.attr.plugins + ']', $form);
             var $targets = $('[' + constants.attr.plugins + ']', $form).not($nestedTargets);
             $targets.each(function () {
@@ -193,23 +129,11 @@ var XValidate = window.XValidate || {};
             var messages = {};
             $('[' + constants.attr.message + ']', $form).each(function () {
                 var message = $(this);
-                message.addClass(constants.classes.message);
+                message.addClass(self.classes.message);
                 var targetName = message.attr(constants.attr.message);
                 messages[targetName] = message;
             });
 
-            /* set up fields. key/value pair of field name / dom element array */
-            var $fields = {};
-            $('[' + constants.attr.field + ']', $form).each(function () {
-                var $field = $(this);
-                var fieldName = $field.attr(constants.attr.field);
-                if (!$fields.hasOwnProperty(fieldName)) {
-                    $fields[fieldName] = [];
-                }
-                $fields[fieldName].push($field);
-            });
-
-            this.$fields = $fields;
             this.$form = $form;
             this.messages = messages;
             this.targets = targets;
@@ -219,8 +143,10 @@ var XValidate = window.XValidate || {};
         _createClass(Form, [{
             key: 'clearMessages',
             value: function clearMessages() {
+                var _this = this;
+
                 $.each(this.messages, function (key, message) {
-                    return message.html('').removeClass(constants.classes.messageInvalid);
+                    return message.html('').removeClass(_this.classes.messageInvalid);
                 });
             }
         }, {
@@ -231,15 +157,23 @@ var XValidate = window.XValidate || {};
         }, {
             key: 'onValidateRequired',
             value: function onValidateRequired(callback) {
+                var validate = function validate(e) {
+                    callback(e);
+                    // cancel the submit for now
+                    // todo: continue form submit without validating?
+                    return false;
+                };
+
                 if (this.$form.is('form')) {
                     this.$form.on('submit', function (e) {
-                        callback(e);
-                        return false;
+                        return validate(e);
                     });
-                    return;
+                } else {
+                    // bind all child button clicks to the validate action
+                    $('button,[' + constants.attr.submit + ']', this.$form).on('click', function (e) {
+                        return validate(e);
+                    });
                 }
-                $('button,[' + constants.attr.submit + ']', this.$form).on('click', callback);
-                return;
             }
         }, {
             key: 'onValidateStart',
@@ -248,7 +182,7 @@ var XValidate = window.XValidate || {};
                 this.validating = true;
                 this.setChildrenValidating(true);
                 this.clearMessages();
-                this.invalidCount = 0;
+                this.valid = true;
             }
         }, {
             key: 'onValidateStop',
@@ -256,12 +190,14 @@ var XValidate = window.XValidate || {};
                 this.validating = false;
                 this.setChildrenValidating(false);
                 this.trigger(constants.events.validated, {
-                    valid: this.invalidCount === 0
+                    valid: this.valid === true
                 });
             }
         }, {
             key: 'setChildrenValidating',
             value: function setChildrenValidating(value) {
+                var _this2 = this;
+
                 // update target validating values
                 $.each(this.targets, function (i, target) {
                     target.validating = value;
@@ -270,21 +206,22 @@ var XValidate = window.XValidate || {};
 
                 // add or remove validating css class on messages
                 $.each(this.messages, function (key, message) {
-                    return utils.setClass(message, constants.classes.validating, value);
+                    return utils.setClass(message, _this2.classes.validating, value);
                 });
             }
         }, {
             key: 'trigger',
             value: function trigger(eventType, e) {
+                // todo: pass through original event args (submit/click)?
                 this.$form.trigger(eventType, e);
             }
         }, {
-            key: 'invalidCount',
+            key: 'valid',
             get: function get() {
-                return this.$form.data(constants.data.invalidCount);
+                return this.$form.data(constants.data.valid);
             },
             set: function set(value) {
-                this.$form.data(constants.data.invalidCount, value);
+                this.$form.data(constants.data.valid, value);
             }
         }, {
             key: 'validating',
@@ -303,17 +240,30 @@ var XValidate = window.XValidate || {};
         function Plugin(options) {
             _classCallCheck(this, Plugin);
 
-            this.callback = options.callback;
-            this.dataTemplate = options.data;
+            var defaults = {
+                message: 'invalid',
+                getData: function getData(target) {
+                    return _defineProperty({}, '' + target.name, '\'' + target.value + '\'');
+                },
+                validateResult: function validateResult(result) {
+                    return result === true;
+                }
+            };
+
+            options = $.extend({}, defaults, options);
+
+            this.ajaxOptions = options.ajaxOptions;
             this.message = options.message;
             this.name = options.name;
+            this.getData = options.getData;
+            this.validateResult = options.validateResult;
             this.url = options.url;
         }
 
         _createClass(Plugin, [{
             key: 'isValid',
             value: function isValid(result) {
-                return this.callback(result) === true;
+                return this.validateResult(result) === true;
             }
         }]);
 
@@ -322,11 +272,11 @@ var XValidate = window.XValidate || {};
 
     var Target = function () {
         function Target(form, $element) {
-            var _this = this;
+            var _this3 = this;
 
             _classCallCheck(this, Target);
 
-            $element.addClass(constants.classes.target);
+            $element.addClass(form.classes.target);
 
             /* set up validations */
             var validations = [];
@@ -336,7 +286,7 @@ var XValidate = window.XValidate || {};
                 if (pluginName) {
                     var plugin = Plugins.get(pluginName);
                     if (plugin) {
-                        validations.push(new Validation(_this, plugin));
+                        validations.push(new Validation(_this3, plugin));
                     } else {
                         console.log('plugin ' + pluginName + ' not found');
                     }
@@ -352,17 +302,22 @@ var XValidate = window.XValidate || {};
         _createClass(Target, [{
             key: 'showError',
             value: function showError(messageText) {
-                this.$element.addClass(constants.classes.targetInvalid);
+                this.$element.addClass(this.form.classes.targetInvalid);
                 var message = this.form.messageFor(this);
-                message.html(message.html() + messageText + ' ').addClass(constants.classes.messageInvalid);
+                message.html(message.html() + messageText + ' ').addClass(this.form.classes.messageInvalid);
             }
         }, {
             key: 'validating',
             set: function set(value) {
                 if (value === true) {
-                    this.$element.removeClass(constants.classes.targetInvalid);
+                    this.$element.removeClass(this.form.classes.targetInvalid);
                 }
-                utils.setClass(this.$element, constants.classes.validating, value);
+                utils.setClass(this.$element, this.form.classes.validating, value);
+            }
+        }, {
+            key: 'value',
+            get: function get() {
+                return this.$element.val();
             }
         }]);
 
@@ -380,29 +335,23 @@ var XValidate = window.XValidate || {};
         _createClass(Validation, [{
             key: 'createRequest',
             value: function createRequest() {
-                return $.ajax({
+                return $.ajax($.extend({}, this.plugin.ajaxOptions, {
                     url: this.plugin.url,
-                    data: this.data()
-                });
-            }
-        }, {
-            key: 'data',
-            value: function data() {
-                // todo: bind plugin.data to form
-                return { key: 1 };
+                    data: this.plugin.getData(this.target)
+                }));
             }
         }, {
             key: 'message',
             value: function message() {
-                // todo: bind plugin.message to form
-                return this.plugin.message;
+                // todo: better templating
+                return this.plugin.message.replace('${0}', this.target.value);
             }
         }, {
             key: 'validate',
             value: function validate(result) {
                 var isValid = this.plugin.isValid(result);
                 if (isValid === false) {
-                    this.target.form.invalidCount++;
+                    this.target.form.valid = false;
                     this.target.showError(this.message());
                 }
             }
@@ -412,14 +361,14 @@ var XValidate = window.XValidate || {};
     }();
 
     var Validator = function () {
-        function Validator($form) {
-            var _this2 = this;
+        function Validator($form, options) {
+            var _this4 = this;
 
             _classCallCheck(this, Validator);
 
-            var form = new Form($form);
+            var form = new Form($form, options);
             form.onValidateRequired(function () {
-                return _this2.validate();
+                return _this4.validate();
             });
 
             this.form = form;
@@ -434,16 +383,16 @@ var XValidate = window.XValidate || {};
         }, {
             key: 'onFulfilled',
             value: function onFulfilled(results) {
-                var _this3 = this;
+                var _this5 = this;
 
                 $.each(results, function (i, result) {
-                    return _this3.form.validations[i].validate(result);
+                    return _this5.form.validations[i].validate(result);
                 });
             }
         }, {
             key: 'validate',
             value: function validate() {
-                var _this4 = this;
+                var _this6 = this;
 
                 if (this.form.validating === true) {
                     return;
@@ -456,9 +405,9 @@ var XValidate = window.XValidate || {};
                 });
 
                 Promise.all(requests).then(function (results) {
-                    return _this4.onFulfilled(results);
+                    return _this6.onFulfilled(results);
                 }, this.onFail).catch(this.onFail).then(function () {
-                    return _this4.form.onValidateStop();
+                    return _this6.form.onValidateStop();
                 });
             }
         }]);
@@ -472,7 +421,7 @@ var XValidate = window.XValidate || {};
     var validators = [];
     $.fn.xvalidate = function (options) {
         return this.each(function (i, form) {
-            return validators.push(new Validator($(form)));
+            return validators.push(new Validator($(form), options));
         });
     };
 

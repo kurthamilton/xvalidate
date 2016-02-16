@@ -17,9 +17,10 @@ var XValidate = window.XValidate || {};
             // The plugins an element within a form requires to be validated. Required. Set to a comma separated list of plugin names.
             // Add an accompanying plugin via XValidate.Plugins.add(options).
             plugins: 'data-xval-plugins',
-            // The message displaying the validation message. Optional. Set to the name of the element.
+            // The message displaying the validation message. Optional. Set attribute value to the name of the element.
+            // Use ${0} as a placeholder for the value
             message: 'data-xval-message-for',
-            // The element whose click event triggers a form validation. Optional. Not required if validating a form element or a non-form element with a button.
+            // The element whose click event triggers a form validation. Optional. Not required if validating a form element or a non-form element with a button
             submit: 'data-xval-submit'
         },
         // CSS classes added by the validator for styling. Can be overridden by setting options.classes on setup.
@@ -34,7 +35,7 @@ var XValidate = window.XValidate || {};
         },
         // privately used data keys
         data: {
-            invalidCount: '_xval-invalidCount',
+            valid: '_xval-valid',
             validating: '_xval-validating'
         },
         // The events triggered during validation.
@@ -103,7 +104,7 @@ var XValidate = window.XValidate || {};
             let validations = [];
 
             // todo: handle dynamic forms
-            // todo: optimise
+            // todo: optimise this double selector
             let $nestedTargets = $(`[${constants.attr.form}] [${constants.attr.plugins}]`, $form);
             let $targets = $(`[${constants.attr.plugins}]`, $form).not($nestedTargets);
             $targets.each(function() {
@@ -129,11 +130,11 @@ var XValidate = window.XValidate || {};
             this.validations = validations;
         }
 
-        get invalidCount() {
-            return this.$form.data(constants.data.invalidCount);
+        get valid() {
+            return this.$form.data(constants.data.valid);
         }
-        set invalidCount(value) {
-            this.$form.data(constants.data.invalidCount, value);
+        set valid(value) {
+            this.$form.data(constants.data.valid, value);
         }
 
         get validating() {
@@ -155,15 +156,19 @@ var XValidate = window.XValidate || {};
         }
 
         onValidateRequired(callback) {
+            let validate = e => {
+                callback(e);
+                // cancel the submit for now
+                // todo: continue form submit without validating?
+                return false;
+            };
+
             if (this.$form.is('form')) {
-                this.$form.on('submit', (e) => {
-                    callback(e);
-                    return false;
-                });
-                return;
+                this.$form.on('submit', e => validate(e));
+            } else {
+                // bind all child button clicks to the validate action
+                $(`button,[${constants.attr.submit}]`, this.$form).on('click', e => validate(e));
             }
-            $(`button,[${constants.attr.submit}]`, this.$form).on('click', callback);
-            return;
         }
 
         onValidateStart() {
@@ -171,14 +176,14 @@ var XValidate = window.XValidate || {};
             this.validating = true;
             this.setChildrenValidating(true);
             this.clearMessages();
-            this.invalidCount = 0;
+            this.valid = true;
         }
 
         onValidateStop() {
             this.validating = false;
             this.setChildrenValidating(false);
             this.trigger(constants.events.validated, {
-                valid: this.invalidCount === 0
+                valid: this.valid === true
             });
         }
 
@@ -194,6 +199,7 @@ var XValidate = window.XValidate || {};
         }
 
         trigger(eventType, e) {
+            // todo: pass through original event args (submit/click)?
             this.$form.trigger(eventType, e);
         }
     }
@@ -283,14 +289,14 @@ var XValidate = window.XValidate || {};
         }
 
         message() {
-            // todo: bind plugin.message to form
-            return this.plugin.message;
+            // todo: better templating
+            return this.plugin.message.replace('${0}', this.target.value);
         }
 
         validate(result) {
             let isValid = this.plugin.isValid(result);
             if (isValid === false) {
-                this.target.form.invalidCount++;
+                this.target.form.valid = false;
                 this.target.showError(this.message());
             }
         }
