@@ -2,12 +2,8 @@ var plugins = {
     test: {
         name: 'test-plugin',
         url: 'http://jsonplaceholder.typicode.com/users/',
-        data: {
-            scalar: '${0}',
-            array: '[${fields1}]'
-        },
         message: '',
-        callback: function(result) {
+        validateResult: function(result) {
             console.log(result);
             return false;
         }
@@ -15,7 +11,7 @@ var plugins = {
     duplicateTest: {
         name: 'test-plugin',
         url: 'http://jsonplaceholder.typicode.com/users/',
-        callback: function(result) {
+        validateResult: function(result) {
             alert('I am a duplicate plugin');
             return false;
         }
@@ -28,17 +24,13 @@ var plugins = {
     plugin1: {
         name: 'plugin1',
         url: 'http://jsonplaceholder.typicode.com/users/',
-        data: {
-            scalar: '${0}',
-            array: '[${fields1}]'
-        },
         message: 'Plugin1 error'
     },
     plugin2: {
         name: 'plugin2',
         url: 'http://jsonplaceholder.typicode.com/users/',
         message: 'Plugin2 error. I should be valid.',
-        callback: function(result) {
+        validateResult: function(result) {
             return true;
         }
     },

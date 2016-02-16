@@ -12,9 +12,6 @@ var XValidate = window.XValidate || {};
 
     const constants = {
         attr: {
-            // todo: review this
-            // A field to be bound to a plugin data object.
-            field: 'data-xval-field',
             // A form to be validated. Required. Form elements will be validated on submit. Other elements will be validated on a descendant button click.
             form: 'data-xval-form',
             // The plugins an element within a form requires to be validated. Required. Set to a comma separated list of plugin names.
@@ -25,10 +22,9 @@ var XValidate = window.XValidate || {};
             // The element whose click event triggers a form validation. Optional. Not required if validating a form element or a non-form element with a button.
             submit: 'data-xval-submit'
         },
-        // todo: user configured css classes
-        // CSS classes added by the validator. Can be used for styling
+        // CSS classes added by the validator for styling. Can be overridden by setting options.classes on setup.
         classes: {
-            // todo: match bootstrap conventions
+            // todo: match bootstrap conventions?
             message: 'validation-message',
             messageInvalid: 'validation-message--invalid',
             target: 'validation-target',
@@ -53,25 +49,21 @@ var XValidate = window.XValidate || {};
     let plugins = {};
     let Plugins = {
         add: function(options) {
-            let defaults = {
-                message: 'invalid',
-                data: '{0}',
-                callback: function(result) {
-                    return result === true;
-                }
-            };
-
-            options = $.extend(defaults, options);
-
             /* validate options */
             if (!options.name || !options.url) {
                 console.log('plugin name or url not specified');
                 return;
             }
 
-            // check callback is a function
-            if (typeof options.callback !== 'function') {
-                console.log('callback is not a function');
+            // check validateResult is a function
+            if (options.validateResult && typeof options.validateResult !== 'function') {
+                console.log('validateResult is not a function');
+                return;
+            }
+
+            // check getData is a function
+            if (options.getData && typeof options.getData !== 'function') {
+                console.log('getData is not a function');
                 return;
             }
 
@@ -99,68 +91,19 @@ var XValidate = window.XValidate || {};
         }
     };
 
-    // store the fields required by the validation
-    // todo: optimise this
-    let fieldMap = {};
-
-    class DataTemplate {
-        constructor(template) {
-
-            let fields = [];
-
-            // todo: much more work! consider things like arrays and complex objects. Move this into its own function
-            if (typeof template === 'object') {
-                $.each(template, (key, value) => {
-                    let field = DataItemTemplate.parse(value);
-                    if (field) {
-                        fields.push(field);
-                        if (!fieldMap.hasOwnProperty(field.fieldName)) {
-                            fieldMap[field.fieldName] = document.getElementsByName(field.fieldName);
-                        }
-                    }
-                });
-            }
-
-            this.fields = fields;
-        }
-    }
-
-    // match strings containing strings like ${field-name} or [${field-name}]
-    const fieldNamePattern = '\\$\\{(\\S+)\\}';
-    const fieldRegex = new RegExp(`^${fieldNamePattern}|\\[${fieldNamePattern}\\]$`, 'g');
-
-    class DataItemTemplate {
-        constructor(fieldName, isArray) {
-            this.fieldName = fieldName;
-            this.isArray = isArray;
-        }
-
-        static parse(value) {
-            if (typeof value !== 'string') {
-                return null;
-            }
-
-            fieldRegex.lastIndex = 0;
-            let matches = fieldRegex.exec(value);
-            if (!matches) {
-                return null;
-            }
-
-            let fieldName = matches[1] || matches[2];
-            let isArray = matches[2] !== undefined;
-            return new DataItemTemplate(fieldName, isArray);
-        }
-    }
-
     class Form {
-        constructor($form) {
+        constructor($form, options) {
             let self = this;
+
+            // set classes. this is required by the Target constructor
+            this.classes = $.extend({}, constants.classes, options ? options.classes : null);
 
             /* set up targets and validations */
             let targets = [];
             let validations = [];
 
             // todo: handle dynamic forms
+            // todo: optimise
             let $nestedTargets = $(`[${constants.attr.form}] [${constants.attr.plugins}]`, $form);
             let $targets = $(`[${constants.attr.plugins}]`, $form).not($nestedTargets);
             $targets.each(function() {
@@ -175,23 +118,11 @@ var XValidate = window.XValidate || {};
             let messages = {};
             $(`[${constants.attr.message}]`, $form).each(function() {
                 let message = $(this);
-                message.addClass(constants.classes.message);
+                message.addClass(self.classes.message);
                 let targetName = message.attr(constants.attr.message);
                 messages[targetName] = message;
             });
-            
-            /* set up fields. key/value pair of field name / dom element array */
-            let $fields = {};
-            $(`[${constants.attr.field}]`, $form).each(function() {
-                 let $field = $(this);
-                 let fieldName = $field.attr(constants.attr.field);
-                 if (!$fields.hasOwnProperty(fieldName)) {
-                     $fields[fieldName] = [];
-                 }
-                 $fields[fieldName].push($field);
-            });
-            
-            this.$fields = $fields;
+
             this.$form = $form;
             this.messages = messages;
             this.targets = targets;
@@ -215,7 +146,7 @@ var XValidate = window.XValidate || {};
         clearMessages() {
             $.each(this.messages, (key, message) =>
                 message.html('')
-                       .removeClass(constants.classes.messageInvalid)
+                       .removeClass(this.classes.messageInvalid)
                 );
         }
 
@@ -259,7 +190,7 @@ var XValidate = window.XValidate || {};
             });
 
             // add or remove validating css class on messages
-            $.each(this.messages, (key, message) => utils.setClass(message, constants.classes.validating, value));
+            $.each(this.messages, (key, message) => utils.setClass(message, this.classes.validating, value));
         }
 
         trigger(eventType, e) {
@@ -269,21 +200,34 @@ var XValidate = window.XValidate || {};
 
     class Plugin {
         constructor(options) {
-            this.callback = options.callback;
-            this.dataTemplate = options.data;
+            let defaults = {
+                message: 'invalid',
+                getData: function(target) {
+                    return { [`${target.name}`]: `'${target.value}'` };
+                },
+                validateResult: function(result) {
+                    return result === true;
+                }
+            };
+
+            options = $.extend({}, defaults, options);
+
+            this.ajaxOptions = options.ajaxOptions;
             this.message = options.message;
             this.name = options.name;
+            this.getData = options.getData;
+            this.validateResult = options.validateResult;
             this.url = options.url;
         }
 
         isValid(result) {
-            return this.callback(result) === true;
+            return this.validateResult(result) === true;
         }
     }
 
     class Target {
         constructor(form, $element) {
-            $element.addClass(constants.classes.target);
+            $element.addClass(form.classes.target);
 
             /* set up validations */
             let validations = [];
@@ -308,16 +252,20 @@ var XValidate = window.XValidate || {};
 
         set validating(value) {
             if (value === true) {
-                this.$element.removeClass(constants.classes.targetInvalid);
+                this.$element.removeClass(this.form.classes.targetInvalid);
             }
-            utils.setClass(this.$element, constants.classes.validating, value);
+            utils.setClass(this.$element, this.form.classes.validating, value);
+        }
+
+        get value() {
+            return this.$element.val();
         }
 
         showError(messageText) {
-            this.$element.addClass(constants.classes.targetInvalid);
+            this.$element.addClass(this.form.classes.targetInvalid);
             let message = this.form.messageFor(this);
             message.html(message.html() + messageText + ' ')
-                   .addClass(constants.classes.messageInvalid);
+                   .addClass(this.form.classes.messageInvalid);
         }
     }
 
@@ -328,15 +276,10 @@ var XValidate = window.XValidate || {};
         }
 
         createRequest() {
-            return $.ajax({
+            return $.ajax($.extend({}, this.plugin.ajaxOptions, {
                 url: this.plugin.url,
-                data: this.data()
-            });
-        }
-
-        data() {
-            // todo: bind plugin.data to form
-            return { key: 1 };
+                data: this.plugin.getData(this.target)
+            }));
         }
 
         message() {
@@ -354,8 +297,8 @@ var XValidate = window.XValidate || {};
     }
 
     class Validator {
-        constructor($form) {
-            let form = new Form($form);
+        constructor($form, options) {
+            let form = new Form($form, options);
             form.onValidateRequired(() => this.validate());
 
             this.form = form;
@@ -390,15 +333,15 @@ var XValidate = window.XValidate || {};
     // jQuery plugin
     let validators = [];
     $.fn.xvalidate = function (options) {
-        return this.each((i, form) => validators.push(new Validator($(form))));
+        return this.each((i, form) => validators.push(new Validator($(form), options)));
     };
-    
+
     // expose public functions
     $.extend(X, {
         Constants: constants,
         Plugins: Plugins
     });
-    
+
     return X;
 })(jQuery, XValidate);
 
