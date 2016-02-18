@@ -34,11 +34,6 @@ var XValidate = window.XValidate || {};
             // added to the target and message
             validating: 'validating'
         },
-        // privately used data keys
-        data: {
-            valid: '_xval-valid',
-            validating: '_xval-validating'
-        },
         // The events triggered during validation.
         events: {
             // Triggered on the form when validation starts.
@@ -135,21 +130,9 @@ var XValidate = window.XValidate || {};
             this.$form = $form;
             this.messages = messages;
             this.targets = targets;
+            this.valid = false;
+            this.validating = false;
             this.validations = validations;
-        }
-
-        get valid() {
-            return this.$form.data(constants.data.valid);
-        }
-        set valid(value) {
-            this.$form.data(constants.data.valid, value);
-        }
-
-        get validating() {
-            return this.$form.data(constants.data.validating);
-        }
-        set validating(value) {
-            this.$form.data(constants.data.validating, value);
         }
 
         clearMessages() {
