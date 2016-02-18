@@ -4,13 +4,22 @@
     <link rel="stylesheet" type="text/css" href="css/style.css" />
 </head>
 <body>
+    <h3>Scenarios - TODO</h3>
+    <ul>
+        <li>standalone comparison - does a user name already exist</li>
+        <li>list comparison - is a list of user names already taken</li>
+        <li></li>
+        <li></li>
+    </ul>
+
+
 	<section>
         <form data-xval-form>
             A &lt;form&gt;
 
             <div class="form-group">
                 Field 1
-                <input type="text" name="field1" data-xval-plugins="test-plugin,non-existent-plugin" value="field 1" />
+                <input type="text" name="field1" data-xval-plugins="fake-authors,non-existent-plugin" value="field 1" />
                 <span data-xval-message-for="field1"></span>
             </div>
             <div class="form-group">
@@ -67,9 +76,12 @@
                 <button>Submit</button>
             </div>
     </section>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+	<!--jQuery-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>-->
-	<script src="../src/xvalidate.js"></script>
+    <!--XValidate-->
+    <script src="../src/xvalidate.js"></script>
+    <!--Demo XValidate plugins-->
     <script src="js/xval-plugins.js"></script>
 </body>
 </html>
