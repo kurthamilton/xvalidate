@@ -1,11 +1,11 @@
 (function() {
     // the plugins
     var plugins = {
-        true: {
+        "true": {
             name: 'true',
             url: 'http://www.mocky.io/v2/56c529e30f0000aa0ea20418'
         },
-        false: {
+        "false": {
             name: 'false',
             url: 'http://www.mocky.io/v2/56c52a460f0000bc0ea2041a'
         },
@@ -15,8 +15,7 @@
             validateResponse: function(response) {
                 return response === false;
             }
-        }
-
+        },
         test: {
             name: 'test-plugin',
             url: 'http://jsonplaceholder.typicode.com/users/',
